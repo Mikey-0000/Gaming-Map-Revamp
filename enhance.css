@@ -465,6 +465,26 @@ img.px { image-rendering: pixelated; }
     .mechanic-node.node-final { left: 58%; }
 }
 
+
+/* ---------- HUD tuck + subtle motion ---------- */
+body { padding-bottom: 64px; } /* room so the HUD never hides the last content */
+.fx-hud { transition: transform .35s cubic-bezier(.2,.8,.2,1); }
+.fx-hud.fx-tuck { transform: translateY(calc(100% - 6px)); }
+.fx-hud.fx-tuck:hover, .fx-hud:focus-within { transform: none; }
+.fx-signal {
+    position: absolute; top: -2px; left: 0; width: 5px; height: 5px; background: var(--blue);
+    box-shadow: 0 0 0 3px rgba(0,132,255,.18); opacity: 0; pointer-events: none;
+    animation: fx-signal 10s linear infinite;
+}
+@keyframes fx-signal {
+    0% { left: 0; opacity: 0; } 3% { opacity: 1; }
+    28% { left: calc(100% - 5px); opacity: 1; } 31% { left: calc(100% - 5px); opacity: 0; }
+    100% { left: calc(100% - 5px); opacity: 0; }
+}
+.timeline.fx-tl::before { transform: scaleX(0); transform-origin: left center; transition: transform 1.3s cubic-bezier(.6,0,.2,1); }
+.timeline.fx-tl.fx-drawn::before { transform: scaleX(1); }
+.fx-ev { margin-left: -6px; }
+
 /* ---------- terminal mode (secret) ---------- */
 html.fx-terminal body { background: #0d1117 !important; color: #9cdcfe !important; }
 html.fx-terminal body * { border-color: #30363d !important; }

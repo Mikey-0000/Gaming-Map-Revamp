@@ -398,15 +398,20 @@
         if (reduced || !h) return;
         var nodes = [], w = document.createTreeWalker(h, NodeFilter.SHOW_TEXT, null);
         while (w.nextNode()) if (w.currentNode.nodeValue.trim()) nodes.push({ n: w.currentNode, t: w.currentNode.nodeValue });
-        var frame = 0, total = 22;
+        // time-based, so it always finishes on schedule even if the browser slows timers in a background tab
+        var DUR = 650, t0 = Date.now(), done = false;
+        function finish() { if (done) return; done = true; nodes.forEach(function (o) { o.n.nodeValue = o.t; }); }
         (function step() {
-            frame++;
+            if (done) return;
+            var p = (Date.now() - t0) / DUR;
+            if (p >= 1) return finish();
             nodes.forEach(function (o) {
-                var keep = Math.floor((frame / total) * o.t.length);
+                var keep = Math.floor(p * o.t.length);
                 o.n.nodeValue = o.t.split("").map(function (ch, i) { return i < keep || ch === " " || ch === "\n" ? ch : GLYPHS[(Math.random() * GLYPHS.length) | 0]; }).join("");
             });
-            if (frame < total) setTimeout(step, 30); else nodes.forEach(function (o) { o.n.nodeValue = o.t; });
+            setTimeout(step, 30);
         })();
+        setTimeout(finish, DUR + 50);
     }
     decode($("h1"));
 
@@ -1119,7 +1124,7 @@
             '<p class="fx-sub">// ARRIVED MOST RECENTLY</p><div class="fx-entries" id="fxRecent"></div>';
         archiveSec.parentNode.insertBefore(ts, archiveSec.nextSibling);
         var track = $("#fxTrack"), range = $("#fxRange"), seenMin = MAX, seenMax = MAX;
-        var pos = function (y) { return (y - MIN) / (MAX - MIN) * 100; };
+        var pos = function (y) { return 1.5 + (y - MIN) / (MAX - MIN) * 97; }; // keep edge markers inside the box
         var stacks = {};
         track.innerHTML = '<div class="fx-track-line"></div>' + [1960, 1970, 1980, 1990, 2000, 2010].map(function (d) { return '<span class="fx-tick" style="left:' + pos(d) + '%">' + d + "</span>"; }).join("") +
             EV.map(function (e, i) { var n = stacks[e.y] = (stacks[e.y] || 0) + 1; return '<button type="button" class="fx-ev" data-ev="' + i + '" style="left:' + pos(e.y) + "%;bottom:" + (22 + (n - 1) * 15) + 'px" title="' + e.y + " // " + e.t + '" aria-label="' + e.y + ", " + e.t + '"></button>'; }).join("");
@@ -1581,6 +1586,49 @@
         };
         window.fxUpdateBoss();
         index.push({ l: "The Final Archive (boss)", s: "NODE // 08", boss: true });
+    })();
+
+    /* ---------------------------------------------------------
+       SUBTLE MOTION + HUD THAT GETS OUT OF THE WAY
+       --------------------------------------------------------- */
+    (function () {
+        // the HUD tucks down while you scroll down and comes back when you scroll up, hover or tab to it
+        var lastY = scrollY;
+        addEventListener("scroll", function () {
+            var y = scrollY, d = y - lastY; lastY = y;
+            if (Math.abs(d) < 4) return;
+            hud.classList.toggle("fx-tuck", d > 0 && y > 200);
+        }, { passive: true });
+        if (reduced) return;
+
+        // a small signal now and then travels along each map connector
+        $$(".map-line, .genre-line").forEach(function (l, i) {
+            var sig = el("span", "fx-signal"); sig.style.animationDelay = (1.6 + i * 1.4 + Math.random() * 2).toFixed(2) + "s"; l.appendChild(sig);
+        });
+
+        // the big year in each game header counts up on arrival
+        $$(".game-hero-year").forEach(function (y) {
+            var orig = y.textContent, end = parseInt(orig, 10); if (!end) return;
+            var start = end - 40, t0 = Date.now(), DUR = 1100;
+            var iv = setInterval(function () {
+                var k = Math.min(1, (Date.now() - t0) / DUR), e = 1 - Math.pow(1 - k, 3);
+                y.textContent = Math.round(start + (end - start) * e);
+                if (k >= 1) { clearInterval(iv); y.textContent = orig; }
+            }, 30);
+            setTimeout(function () { clearInterval(iv); y.textContent = orig; }, DUR + 100); // always lands on the real year
+        });
+
+        if (!("IntersectionObserver" in window)) return;
+        // section labels decode as they scroll into view
+        var lo = new IntersectionObserver(function (ents) {
+            ents.forEach(function (en) { if (en.isIntersecting) { lo.unobserve(en.target); decode(en.target); } });
+        }, { threshold: 0.6 });
+        $$(".home-section-label > span:first-child, .wiki-section > h2, .genre-section > h2, .fx-game-top h2").forEach(function (h) { lo.observe(h); });
+        // timeline rules draw themselves across
+        var to = new IntersectionObserver(function (ents) {
+            ents.forEach(function (en) { if (en.isIntersecting) { to.unobserve(en.target); en.target.classList.add("fx-drawn"); } });
+        }, { threshold: 0.3 });
+        $$(".timeline").forEach(function (t) { t.classList.add("fx-tl"); to.observe(t); });
     })();
 
     /* ---------------------------------------------------------
