@@ -124,7 +124,9 @@
         run:      ["Afterburner", "Lasted 30 seconds in Run mode."],
         time:     ["Time Traveller", "Scrubbed through all of gaming history."],
         world:    ["World Mapper", "Visited all 7 paths on the World Map."],
-        boss:     ["Grand Archivist", "Defeated the Archive Guardian in the Final Archive."]
+        boss:     ["Grand Archivist", "Defeated the Archive Guardian in the Final Archive."],
+        daily:    ["Daily Driver", "Completed a daily challenge."],
+        streak3:  ["On a Roll", "Completed daily challenges 3 days in a row."]
     };
 
     /* ---------------------------------------------------------
@@ -191,6 +193,7 @@
     hud.innerHTML =
         '<div class="fx-hud-prog"><span class="fx-hud-label">ARCHIVE // </span><b id="fxLv">LV 1</b> · <span id="fxRead">00/26</span> ENTRIES<div class="fx-hud-bar"><i id="fxBar"></i></div></div>' +
         '<button type="button" id="fxSearchBtn" aria-label="Search the archive (press /)">/ SEARCH</button>' +
+        '<button type="button" id="fxDailyBtn" aria-label="Daily challenge">◆ DAILY<span class="fx-daily-dot" id="fxDailyDot"></span></button>' +
         '<button type="button" id="fxTrophyBtn" aria-label="Achievements">★ <span class="fx-count" id="fxAchCount">0</span></button>' +
         '<button type="button" id="fxWorldBtn" aria-label="Open the World Map (press M)">⌖ WORLD</button>' +
         '<button type="button" id="fxSoundBtn" aria-pressed="false" aria-label="Toggle sound">SND OFF</button>';
@@ -325,7 +328,7 @@
     function go(i) {
         var r = res[i]; if (!r) return;
         closeSearch(); unlock("search");
-        if (r.h) navigate(r.h); else if (r.path) openPath(r.path); else if (r.world) window.fxOpenWorld(); else if (r.boss) window.fxOpenBoss(); else openFile(r.file);
+        if (r.h) navigate(r.h); else if (r.path) openPath(r.path); else if (r.world) window.fxOpenWorld(); else if (r.boss) window.fxOpenBoss(); else if (r.daily) window.fxOpenDaily(); else if (r.card) window.fxPlayerCard(); else openFile(r.file);
     }
     q.addEventListener("input", function () { sel = 0; renderSearch(); });
     q.addEventListener("keydown", function (e) {
@@ -345,7 +348,8 @@
             '<div class="fx-modal-body"><div class="fx-entries">' + ids.map(function (i, n) {
                 var got = !!S.ach[i];
                 return '<div class="fx-entry" style="--c:' + (got ? "#0084ff" : "#dddddd") + ";animation-delay:" + n * 0.03 + 's;cursor:default"><small><span>' + (got ? "UNLOCKED" : "LOCKED") + "</span><span>" + pad(n + 1) + "</span></small><b>" + (got ? ACH[i][0] : "???") + "</b><p>" + ACH[i][1] + "</p></div>";
-            }).join("") + '</div><div class="fx-actions"><button class="fx-btn" type="button" id="fxReset">RESET PROGRESS</button></div></div>');
+            }).join("") + '</div><div class="fx-actions"><button class="fx-btn blue" type="button" id="fxCardBtn">▣ PLAYER CARD</button><button class="fx-btn" type="button" id="fxReset">RESET PROGRESS</button></div></div>');
+        $("#fxCardBtn").addEventListener("click", function () { window.fxPlayerCard(); });
         $("#fxReset").addEventListener("click", function () {
             if (!confirm("Reset all XP, achievements and read entries?")) return;
             try { localStorage.removeItem(KEY); } catch (e) { /* storage blocked */ }
@@ -666,7 +670,7 @@
             var p = cell(e); if (p[0] < 0 || p[1] < 0 || p[0] >= C || p[1] >= R) return;
             var i = p[1] * C + p[0], v = mode ? cur : 0;
             if (grid[i] === v) return;
-            if (v && !grid[i]) { S.blocks++; save(); $("#fxPlaced", root).textContent = S.blocks; if (S.blocks >= 50) unlock("builder"); }
+            if (v && !grid[i]) { S.blocks++; save(); $("#fxPlaced", root).textContent = S.blocks; if (S.blocks >= 50) unlock("builder"); sessionBlocks++; report("build", { placed: sessionBlocks }); }
             grid[i] = v; sfx.step(); draw();
         }
         cv.addEventListener("pointerdown", function (e) { painting = true; mode = e.button === 2 ? 0 : 1; cv.setPointerCapture(e.pointerId); paint(e); });
@@ -725,7 +729,7 @@
             if (terr[ny * C + nx] === 0) { sfx.bad(); return; } // water blocks the way
             pos = [nx, ny]; steps++; reveal(); sfx.step();
             lm.forEach(function (l, k) {
-                if (!l[2] && !fog[l[1] * C + l[0]]) { l[2] = true; found++; sfx.bit(); toast("// LANDMARK FOUND", "LANDMARK " + pad(found) + " / 05", "Keep exploring.", ["heart", "coin", "trophy", "controller", "explore"][k]); if (found === 5) { unlock("fog"); addXP(30, cv); } }
+                if (!l[2] && !fog[l[1] * C + l[0]]) { l[2] = true; found++; sfx.bit(); toast("// LANDMARK FOUND", "LANDMARK " + pad(found) + " / 05", "Keep exploring.", ["heart", "coin", "trophy", "controller", "explore"][k]); if (found === 5) { unlock("fog"); addXP(30, cv); } report("explore", { found: found }); }
             });
             update(); draw();
         }
@@ -765,7 +769,7 @@
             else { st.warm -= 40; log("NIGHT // No fire. The cold bites hard."); }
             if (Math.random() < 0.3) { st.hp -= 15; log("NIGHT // Something moved in the dark. You were hurt."); sfx.bad(); }
             st.day++; st.act = 4;
-            if (!st.dead) { log("DAY " + st.day + " // You survived the night."); if (st.day - 1 > S.best) { S.best = st.day - 1; save(); $("#fxBest", root).textContent = S.best + " DAYS"; } if (st.day - 1 >= 5) unlock("survivor"); }
+            if (!st.dead) { log("DAY " + st.day + " // You survived the night."); if (st.day - 1 > S.best) { S.best = st.day - 1; save(); $("#fxBest", root).textContent = S.best + " DAYS"; } if (st.day - 1 >= 5) unlock("survivor"); report("survive", { days: st.day - 1 }); }
         }
         function act(a) {
             if (st.dead) return;
@@ -914,7 +918,7 @@
             $("#fxOut", root).classList.toggle("on", solved);
             var b = S.bests && S.bests.solveFew; $("#fxSb", root).textContent = b ? b : "—";
             if (solved) {
-                grid.classList.add("solved"); sfx.win(); unlock("solve");
+                grid.classList.add("solved"); sfx.win(); unlock("solve"); report("solve", { moves: moves });
                 if (!b || moves < b) { S.bests = S.bests || {}; S.bests.solveFew = moves; save(); $("#fxSb", root).textContent = moves; }
                 var c = center(grid); sparks(c[0], c[1], 24);
             } else grid.classList.remove("solved");
@@ -943,6 +947,7 @@
             $(".fx-bs", root).textContent = b; setStatus("GAME OVER");
             ov.innerHTML = "GAME OVER // SCORE " + sc + "<br><small>" + opts.again + "</small>"; ov.style.display = "flex";
             if (opts.win && opts.win(g)) unlock(opts.ach);
+            report(opts.key, { score: sc, time: g.time || 0 });
         }
         var last = 0;
         function loop(t) {
@@ -1088,7 +1093,7 @@
             if (m === e) { log(MOVES[m] + " vs " + MOVES[e] + " // Clash. No damage."); sfx.tick(); }
             else if (BEATS[m] === e) { ehp--; log(MOVES[m] + " beats " + MOVES[e] + " // You land a hit."); sfx.bit(); shake(".e"); }
             else { hp--; log(MOVES[e] + " beats " + MOVES[m] + " // The Sentinel read you."); sfx.bad(); shake(".p"); }
-            if (ehp <= 0) { done = true; wins = best("fightWins", wins + 1); log("K.O. // You win! Total wins: " + wins + "."); unlock("fight"); sfx.win(); var c = center($(".fx-fighter.e", root)); sparks(c[0], c[1], 30); }
+            if (ehp <= 0) { done = true; wins = best("fightWins", wins + 1); log("K.O. // You win! Total wins: " + wins + "."); unlock("fight"); report("fight", { win: true }); sfx.win(); var c = center($(".fx-fighter.e", root)); sparks(c[0], c[1], 30); }
             else if (hp <= 0) { done = true; log("DEFEAT // The Sentinel stands. Press REMATCH."); }
             render();
         }
@@ -1527,7 +1532,7 @@
                 var bar = $("#fxTimer"); bar.style.transition = "none"; bar.style.width = getComputedStyle(bar).width;
                 btns.forEach(function (b, n) { b.disabled = true; if (n === right) b.classList.add("right"); });
                 if (i === right) {
-                    hp--; streak++;
+                    hp--; streak++; report("boss", { hits: GUARD_HP - hp });
                     var secs = (performance.now() - t0) / 1000, gain = 100 + Math.round(Math.max(0, TIME - secs) * 10) + (streak - 1) * 25;
                     score += gain; sfx.bit();
                     var g = $("#fxGuard"); g.classList.remove("hit"); void g.offsetWidth; g.classList.add("hit");
@@ -1630,6 +1635,117 @@
         }, { threshold: 0.3 });
         $$(".timeline").forEach(function (t) { t.classList.add("fx-tl"); to.observe(t); });
     })();
+
+    /* ---------------------------------------------------------
+       DAILY CHALLENGE: one goal a day, same for everyone,
+       picked from the date. Completing days in a row builds a streak.
+       --------------------------------------------------------- */
+    var sessionBlocks = 0;
+    function todayKey(d) { d = d || new Date(); return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+    var DAILY = [
+        { id: "solve",   t: "Solve a circuit in 16 moves or fewer.", ok: function (e) { return e.moves <= 16; }, where: { path: "solve" } },
+        { id: "jump",    t: "Score 300 or more in Jump mode.",      ok: function (e) { return e.score >= 300; }, where: { path: "jump" } },
+        { id: "run",     t: "Last 20 seconds in Run mode.",         ok: function (e) { return e.time >= 20; }, where: { path: "run" } },
+        { id: "fight",   t: "Beat the Archive Sentinel in Fight mode.", ok: function (e) { return e.win; }, where: { path: "fight" } },
+        { id: "survive", t: "Survive 3 days in Survive mode.",      ok: function (e) { return e.days >= 3; }, where: { page: "dontstarve.html" } },
+        { id: "explore", t: "Find 3 landmarks in Explore mode.",    ok: function (e) { return e.found >= 3; }, where: { page: "skyrim.html" } },
+        { id: "build",   t: "Place 30 blocks in Build mode.",       ok: function (e) { return e.placed >= 30; }, where: { page: "minecraft.html" } },
+        { id: "boss",    t: "Land 6 hits on the Archive Guardian.", ok: function (e) { return e.hits >= 6; }, where: { boss: true } }
+    ];
+    function todays() {
+        var k = todayKey(), h = 0;
+        for (var i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) >>> 0;
+        var pool = S.paths.length >= 7 ? DAILY : DAILY.filter(function (d) { return d.id !== "boss"; });
+        return pool[h % pool.length];
+    }
+    function dailyDone() { return S.daily && S.daily.last === todayKey(); }
+    function renderDailyDot() { var d = $("#fxDailyDot"); if (d) d.classList.toggle("on", !dailyDone()); }
+    function report(type, e) {
+        var c = todays();
+        if (dailyDone() || c.id !== type || !c.ok(e)) return;
+        var y = new Date(); y.setDate(y.getDate() - 1);
+        S.daily = S.daily || { streak: 0, best: 0 };
+        S.daily.streak = S.daily.last === todayKey(y) ? S.daily.streak + 1 : 1;
+        S.daily.best = Math.max(S.daily.best || 0, S.daily.streak);
+        S.daily.last = todayKey(); S.daily.total = (S.daily.total || 0) + 1;
+        save(); renderDailyDot(); sfx.win(); addXP(50);
+        toast("// DAILY COMPLETE", "STREAK // " + S.daily.streak + " DAY" + (S.daily.streak > 1 ? "S" : ""), c.t, "coin");
+        unlock("daily"); if (S.daily.streak >= 3) unlock("streak3");
+    }
+    function openDaily() {
+        var c = todays(), d = S.daily || {}, done = dailyDone();
+        var go = c.where.path ? '<button type="button" class="fx-btn blue" data-fx-path="' + c.where.path + '">▶ PLAY ' + PATHS[c.where.path].name + "</button>"
+            : c.where.page ? '<a class="fx-btn blue" href="' + c.where.page + '">▶ GO TO ' + PAGES[c.where.page.replace(".html", "")].t.toUpperCase() + "</a>"
+            : '<button type="button" class="fx-btn blue" id="fxDailyBoss">▶ FACE THE GUARDIAN</button>';
+        var mid = new Date(); mid.setHours(24, 0, 0, 0);
+        var hrs = Math.max(0, Math.floor((mid - new Date()) / 3600000)), mins = Math.max(0, Math.floor((mid - new Date()) / 60000) % 60);
+        openModal("DAILY // " + todayKey(),
+            '<div class="fx-modal-head"><div><span class="fx-label">DAILY CHALLENGE // ' + todayKey() + "</span><h2>TODAY'S<br><span>" + (done ? "CLEARED." : "MISSION.") + "</span></h2><p>" + c.t + '</p></div><img class="px" src="assets/img/' + (done ? "trophy" : "coin") + '.png" alt=""></div>' +
+            '<div class="fx-modal-body"><div class="fx-stats"><div>STATUS<b>' + (done ? "✓ DONE" : "OPEN") + "</b></div><div>STREAK<b>" + (done || d.last === todayKey(new Date(Date.now() - 864e5)) ? (d.streak || 0) : 0) + "</b></div><div>BEST STREAK<b>" + (d.best || 0) + "</b></div><div>NEXT IN<b>" + hrs + "h " + pad(mins) + "m</b></div></div>" +
+            '<p style="font-size:12px;line-height:1.7">A new challenge arrives at midnight. Everyone gets the same one on the same day, so you can compare with friends. Complete days in a row to build a streak.</p>' +
+            '<div class="fx-actions">' + (done ? "" : go) + "</div></div>");
+        var b = $("#fxDailyBoss"); if (b) b.addEventListener("click", function () { window.fxOpenBoss(); });
+    }
+    $("#fxDailyBtn").addEventListener("click", openDaily);
+    renderDailyDot();
+    index.push({ l: "Daily challenge", s: "MODE // " + todayKey(), daily: true });
+    window.fxOpenDaily = openDaily;
+
+    /* ---------------------------------------------------------
+       PLAYER CARD: a shareable PNG of your archive progress
+       --------------------------------------------------------- */
+    window.fxPlayerCard = function () {
+        var name = (S.name || "PLAYER ONE").toUpperCase().slice(0, 18);
+        // favourite path = the one with most entries read
+        var counts = {}; S.pages.forEach(function (p) { if (PAGES[p]) counts[PAGES[p].game] = (counts[PAGES[p].game] || 0) + 1; });
+        var fav = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; })[0] || "explore";
+        var read = S.pages.filter(function (p) { return PAGES[p]; }).length, b = S.bests || {};
+        var W = 1200, H = 630, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+        var x = cv.getContext("2d"), F = "Consolas, 'Courier New', monospace";
+        function draw(icons) {
+            x.fillStyle = "#f5f5f5"; x.fillRect(0, 0, W, H);
+            x.strokeStyle = "#e6e6e6"; x.lineWidth = 1;
+            for (var gx = 0; gx < W; gx += 50) { x.beginPath(); x.moveTo(gx + .5, 0); x.lineTo(gx + .5, H); x.stroke(); }
+            for (var gy = 0; gy < H; gy += 50) { x.beginPath(); x.moveTo(0, gy + .5); x.lineTo(W, gy + .5); x.stroke(); }
+            x.fillStyle = "#0084ff"; x.fillRect(58, 58, W - 100, H - 100);
+            x.fillStyle = "#ffffff"; x.fillRect(46, 46, W - 100, H - 100);
+            x.strokeStyle = "#222222"; x.lineWidth = 2; x.strokeRect(46, 46, W - 100, H - 100);
+            x.fillStyle = "#0084ff"; x.font = "16px " + F; x.fillText("HISTORICAL GAMING MAP // PLAYER CARD", 86, 100);
+            x.fillStyle = "#777777"; x.textAlign = "right"; x.fillText(todayKey(), W - 94, 100); x.textAlign = "left";
+            x.fillStyle = "#222222"; x.font = "bold 68px " + F; x.fillText(name, 86, 182);
+            x.fillStyle = "#0084ff"; x.font = "bold 30px " + F; x.fillText("LEVEL " + (Math.floor(S.xp / 100) + 1) + "  //  " + S.xp + " XP", 86, 232);
+            x.fillStyle = "#e6e6e6"; x.fillRect(86, 252, 560, 10); x.fillStyle = "#0084ff"; x.fillRect(86, 252, 560 * (S.xp % 100) / 100, 10);
+            var stats = [["ENTRIES READ", read + "/" + TOTAL], ["ACHIEVEMENTS", Object.keys(S.ach).length + "/" + Object.keys(ACH).length],
+                ["PATHS OPEN", S.paths.length + "/7"], ["DAILY STREAK", ((S.daily && S.daily.best) || 0) + " BEST"],
+                ["BOSS BEST", String(S.bossBest || 0)], ["JUMP / RUN", (b.jump || 0) + " / " + (b.run || 0)]];
+            stats.forEach(function (st, i) {
+                var cx = 86 + (i % 3) * 230, cy = 300 + Math.floor(i / 3) * 110;
+                x.strokeStyle = "#222222"; x.lineWidth = 1.5; x.strokeRect(cx, cy, 214, 92);
+                x.fillStyle = "#777777"; x.font = "14px " + F; x.fillText(st[0], cx + 14, cy + 28);
+                x.fillStyle = "#222222"; x.font = "bold 32px " + F; x.fillText(st[1], cx + 14, cy + 70);
+            });
+            x.imageSmoothingEnabled = false;
+            if (icons.fav) x.drawImage(icons.fav, 830, 150, 200, 200);
+            x.fillStyle = "#777777"; x.font = "14px " + F; x.textAlign = "center"; x.fillText("FAVOURITE PATH", 930, 390);
+            x.fillStyle = "#222222"; x.font = "bold 36px " + F; x.fillText(PATHS[fav].name, 930, 432);
+            if (S.ach.boss && icons.trophy) { x.drawImage(icons.trophy, 900, 448, 60, 60); }
+            x.textAlign = "left";
+            x.fillStyle = "#777777"; x.font = "14px " + F; x.fillText("mikey-0000.github.io/Gaming-Map-Revamp", 86, H - 72);
+        }
+        function load(src) { return new Promise(function (r) { var im = new Image(); im.onload = function () { r(im); }; im.onerror = function () { r(null); }; im.src = src; }); }
+        Promise.all([load("assets/img/" + fav + ".png"), load("assets/img/trophy.png")]).then(function (ims) {
+            draw({ fav: ims[0], trophy: ims[1] });
+            var url = cv.toDataURL("image/png");
+            openModal("ARCHIVE // PLAYER CARD",
+                '<div class="fx-modal-body"><span class="fx-label">PLAYER CARD // SAVE IT OR SHARE IT</span>' +
+                '<div class="fx-card-name"><label for="fxName">NAME ON CARD</label><input id="fxName" maxlength="18" value="' + name.replace(/"/g, "") + '"><button type="button" class="fx-btn" id="fxNameGo">UPDATE</button></div>' +
+                '<img class="fx-card-img" src="' + url + '" alt="Your player card: level, XP, entries read, achievements and favourite path">' +
+                '<div class="fx-actions"><a class="fx-btn blue" download="gaming-map-player-card.png" href="' + url + '">⬇ DOWNLOAD PNG</a></div></div>');
+            $("#fxNameGo").addEventListener("click", function () { S.name = $("#fxName").value.trim() || "PLAYER ONE"; save(); window.fxPlayerCard(); });
+            $("#fxName").addEventListener("keydown", function (e) { if (e.key === "Enter") $("#fxNameGo").click(); });
+        });
+    };
+    index.push({ l: "Player card", s: "SHARE YOUR PROGRESS", card: true });
 
     /* ---------------------------------------------------------
        KEYBOARD: search, escape, secret code

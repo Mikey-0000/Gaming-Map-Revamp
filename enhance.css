@@ -485,6 +485,19 @@ body { padding-bottom: 64px; } /* room so the HUD never hides the last content *
 .timeline.fx-tl.fx-drawn::before { transform: scaleX(1); }
 .fx-ev { margin-left: -6px; }
 
+
+/* ---------- daily challenge + player card ---------- */
+.fx-daily-dot { display: none; width: 7px; height: 7px; background: #e5484d; margin-left: 6px; vertical-align: 1px; }
+.fx-daily-dot.on { display: inline-block; animation: fx-blink 1.2s steps(2) infinite; }
+.fx-card-img { display: block; width: 100%; height: auto; border: 1px solid var(--ink); margin: 14px 0 4px; box-shadow: 6px 6px 0 var(--blue); }
+.fx-card-name { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 12px; font-size: 10px; }
+.fx-card-name input { font: 14px Consolas, monospace; padding: 8px 10px; border: 1px solid var(--ink); text-transform: uppercase; flex: 1; min-width: 160px; }
+@media (max-width: 760px) {
+    .fx-hud { left: 8px; right: 8px; bottom: 8px; }
+    .fx-hud-prog { flex: 1; }
+    .fx-hud button { padding: 0 8px; font-size: 9px; }
+}
+
 /* ---------- terminal mode (secret) ---------- */
 html.fx-terminal body { background: #0d1117 !important; color: #9cdcfe !important; }
 html.fx-terminal body * { border-color: #30363d !important; }
@@ -517,3 +530,60 @@ html.fx-terminal a, html.fx-terminal strong, html.fx-terminal h1, html.fx-termin
 }
 
 .fx-modal-card:focus { outline: none; }
+
+/* =========================================================
+   PHONE LAYOUT for the original pages (760px and narrower).
+   Desktop is untouched. Grids collapse, big type scales down,
+   and both maps become a grid of nodes instead of a scatter.
+   ========================================================= */
+@media (max-width: 760px) {
+    .genre-page, .game-wiki-page { padding: 18px 16px 40px; }
+    .genre-page *, .game-wiki-page *, .home-about *, .featured-archive * { overflow-wrap: break-word; }
+    img { max-width: 100%; height: auto; }
+
+    /* multi-column grids → one column */
+    .info-grid, .game-list, .related-list, .overview-layout, .gameplay-grid,
+    .about-layout, .archive-grid, .comparison-grid { grid-template-columns: 1fr !important; gap: 14px !important; }
+    .game-data-grid { grid-template-columns: 1fr 1fr; }
+
+    /* timelines → two columns, no long rule */
+    .timeline { grid-template-columns: 1fr 1fr; row-gap: 26px; }
+    .timeline::before { display: none; }
+    .timeline-event { padding-right: 12px; }
+
+    /* game + genre headers */
+    .game-hero { padding: 22px; }
+    .game-hero-top { flex-direction: column; gap: 4px; margin-bottom: 28px; }
+    .game-hero-top p { margin: 0; }
+    .game-hero h1 { font-size: 34px; letter-spacing: -1px; }
+    .game-hero-main { flex-wrap: wrap; gap: 8px; }
+    .game-hero-year { font-size: 30px; }
+    .genre-header { padding: 22px; }
+    .genre-header h1 { font-size: 30px; }
+
+    /* home + explore intros */
+    .map-intro h1, .explore-intro h1 { font-size: 44px; letter-spacing: -2px; }
+    .about-title h2 { font-size: 30px; letter-spacing: -1px; }
+    .home-nav { flex-wrap: wrap; gap: 8px; }
+    .home-footer { flex-direction: column; gap: 8px; }
+
+    /* both maps: grid of nodes */
+    .mechanic-map, .genre-map {
+        height: auto !important; display: grid; grid-template-columns: 1fr 1fr; gap: 30px 12px;
+        padding: 96px 16px 64px; align-items: start;
+    }
+    .mechanic-node, .genre-map-node {
+        position: relative !important; top: auto !important; left: auto !important; right: auto !important; bottom: auto !important;
+        min-width: 0 !important; transform: none;
+    }
+    .map-line, .genre-line, .fx-node-icon, .map-interface-right, .genre-interface-right, .fx-cross-x, .fx-cross-y, .fx-coords { display: none !important; }
+    .map-instruction, .genre-map-instruction { position: static !important; grid-column: 1 / -1; }
+    .node-description, .genre-node-description { opacity: 1 !important; transform: none !important; }
+    .mechanic-node.node-final { grid-column: 1 / -1; }
+
+    /* explore + compare intros */
+    .explore-intro-bottom, .compare-header { flex-direction: column; align-items: stretch !important; gap: 16px; }
+    .explore-stats { width: 100%; }
+    .explore-stats > * { flex: 1; }
+    .explore-about-layout { grid-template-columns: 1fr !important; gap: 14px !important; }
+}
