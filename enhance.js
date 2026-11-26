@@ -123,7 +123,8 @@
         fight:    ["Champion", "Beat the Archive Sentinel in Fight mode."],
         run:      ["Afterburner", "Lasted 30 seconds in Run mode."],
         time:     ["Time Traveller", "Scrubbed through all of gaming history."],
-        world:    ["World Mapper", "Visited all 7 paths on the World Map."]
+        world:    ["World Mapper", "Visited all 7 paths on the World Map."],
+        boss:     ["Grand Archivist", "Defeated the Archive Guardian in the Final Archive."]
     };
 
     /* ---------------------------------------------------------
@@ -221,6 +222,7 @@
     function markPath(id) {
         if (S.paths.indexOf(id) < 0) { S.paths.push(id); save(); addXP(15); }
         unlock("path"); if (S.paths.length >= 7) unlock("allPaths");
+        if (window.fxUpdateBoss) window.fxUpdateBoss();
     }
     if (S.pages.indexOf(PAGE) < 0) {
         S.pages.push(PAGE); save();
@@ -323,7 +325,7 @@
     function go(i) {
         var r = res[i]; if (!r) return;
         closeSearch(); unlock("search");
-        if (r.h) navigate(r.h); else if (r.path) openPath(r.path); else if (r.world) window.fxOpenWorld(); else openFile(r.file);
+        if (r.h) navigate(r.h); else if (r.path) openPath(r.path); else if (r.world) window.fxOpenWorld(); else if (r.boss) window.fxOpenBoss(); else openFile(r.file);
     }
     q.addEventListener("input", function () { sel = 0; renderSearch(); });
     q.addEventListener("keydown", function (e) {
@@ -374,6 +376,7 @@
         var a = e.target.closest("a[href]"); if (!a || a.target === "_blank") return;
         var href = a.getAttribute("href");
         // dead nodes on the main map open their path popup instead
+        if (href === "#" && a.classList.contains("fx-final")) { e.preventDefault(); var cf = center(a.querySelector(".node-dot") || a); sparks(cf[0], cf[1], 14); window.fxOpenBoss(); return; }
         if (href === "#" && a.classList.contains("mechanic-node")) {
             e.preventDefault();
             var id = (a.className.match(/node-(\w+)/) || [])[1];
@@ -428,6 +431,14 @@
     });
     bars.forEach(function (b) { if (io) io.observe(b); else b.style.width = b.dataset.fxW; });
 
+    /* the 8th node (boss) joins the main map before the map code runs */
+    (function () {
+        var mm = $(".mechanic-map"); if (!mm) return;
+        var node = el("a", "mechanic-node node-final fx-final", '<span class="node-number">08</span><span class="node-dot"></span><strong>FINAL ARCHIVE</strong><span class="node-description" id="fxFinalDesc"></span><span class="node-enter" id="fxFinalEnter"></span>');
+        node.href = "#"; node.setAttribute("aria-label", "Final Archive boss node");
+        mm.appendChild(node);
+    })();
+
     /* ---------------------------------------------------------
        MAPS: draw-in, crosshair, icons, visited state, walk mode
        --------------------------------------------------------- */
@@ -439,7 +450,7 @@
         nodes.forEach(function (n, i) {
             n.classList.add("fx-pop"); n.style.animationDelay = 0.3 + i * 0.09 + "s";
             var key, icon, done;
-            if (isMain) { key = (n.className.match(/node-(\w+)/) || [])[1]; icon = key; done = S.paths.indexOf(key) >= 0; }
+            if (isMain) { key = (n.className.match(/node-(\w+)/) || [])[1]; icon = key === "final" ? "trophy" : key; done = key === "final" ? !!S.bossWins : S.paths.indexOf(key) >= 0; }
             else {
                 key = (n.className.match(/genre-(adventure|comparison|open-world|sandbox|survival)/) || [])[1]; icon = GENRE_ICON[key] || "controller";
                 var href = (n.getAttribute("href") || "").replace("./", "").replace(".html", ""); done = S.pages.indexOf(href) >= 0;
@@ -1217,6 +1228,7 @@
             $$(".fx-wn", plane).forEach(function (b) { b.classList.toggle("seen", seen(byId[b.dataset.id])); });
             var games = nodes.filter(function (n) { return n.kind === "game"; });
             $("#fxWDisc").textContent = "DISCOVERED // " + pad(games.filter(seen).length) + "/" + games.length + " GAMES";
+            if (window.fxUpdateBoss) window.fxUpdateBoss();
         }
         function apply() {
             plane.style.transform = "translate(" + tx + "px," + ty + "px) scale(" + k + ")";
@@ -1278,7 +1290,7 @@
             $$('line[data-pid="' + n.pid + '"]', plane).forEach(function (l) { l.classList.add("hot"); });
             var acts = "";
             if (n.kind === "path") {
-                if (S.paths.indexOf(n.pid) < 0) { S.paths.push(n.pid); save(); addXP(15); unlock("path"); if (S.paths.length >= 7) unlock("allPaths"); }
+                markPath(n.pid);
                 S.worldPaths = S.worldPaths || []; if (S.worldPaths.indexOf(n.pid) < 0) { S.worldPaths.push(n.pid); save(); if (S.worldPaths.length >= 7) unlock("world"); }
                 acts = '<button type="button" class="fx-btn blue" data-w="path">' + (MINI[n.pid] ? "▶ PLAY " + n.label : "OPEN PATH") + "</button>";
                 if (PATHS[n.pid].page) acts += '<button type="button" class="fx-btn" data-w="go" data-href="' + PATHS[n.pid].page + '">FULL PATH PAGE →</button>';
@@ -1330,7 +1342,8 @@
                     if (b) {
                         var n = byId[b.dataset.id]; select(n);
                         focusNode(n, 600);
-                    } else select(null);
+                    } else if (hit && hit.closest(".fx-w-core")) window.fxOpenBoss();
+                    else select(null);
                 }
                 dragStart = null;
             }
@@ -1395,6 +1408,179 @@
         });
         // searchable too
         index.push({ l: "World Map", s: "MODE // PRESS M", world: true });
+    })();
+
+    /* ---------------------------------------------------------
+       THE FINAL ARCHIVE (boss): unlocks after all 7 paths.
+       Every right answer damages the Archive Guardian.
+       Questions favour the entries you have actually read.
+       --------------------------------------------------------- */
+    (function () {
+        var DEV = {
+            zelda: "Nintendo EAD", uncharted2: "Naughty Dog", lifeisstrange: "Dontnod Entertainment", gta3: "DMA Design",
+            skyrim: "Bethesda Game Studios", breathofthewild: "Nintendo EPD", minecraft: "Mojang Studios", gta5: "Rockstar North",
+            terraria: "Re-Logic", residentevil: "Capcom", dontstarve: "Klei Entertainment", subnautica: "Unknown Worlds Entertainment"
+        };
+        Object.keys(FILES).forEach(function (k) { if (!DEV[k]) DEV[k] = FILES[k].dev; });
+        var PIONEERS = [["OXO", "A. S. Douglas"], ["Tennis for Two", "William Higinbotham"], ["Spacewar!", "Steve Russell"], ["the Magnavox Odyssey prototypes", "Ralph Baer"], ["Atari (with Ted Dabney)", "Nolan Bushnell"]];
+        var GUARD_HP = 10, LIVES = 3, TIME = 15;
+
+        function shuffle(a) { for (var i = a.length - 1; i > 0; i--) { var j = (Math.random() * (i + 1)) | 0, t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+        function pick(arr, n, not) { return shuffle(arr.filter(function (x) { return not.indexOf(x) < 0; })).slice(0, n); }
+        function title(k) { return PAGES[k].t; }
+
+        var Q = {
+            year: function (k) {
+                var y = PAGES[k].y, opts = [y];
+                shuffle([-6, -4, -3, -2, -1, 1, 2, 3, 4, 5]).some(function (d) { var v = y + d; if (v <= 2024 && opts.indexOf(v) < 0) opts.push(v); return opts.length === 4; });
+                return { q: "In which year was <b>" + title(k) + "</b> released?", opts: opts.map(String), a: String(y) };
+            },
+            dev: function (k) {
+                var all = Object.keys(DEV).map(function (x) { return DEV[x]; }).filter(function (v, i, s) { return s.indexOf(v) === i; });
+                return { q: "Which studio or creator made <b>" + title(k) + "</b>?", opts: [DEV[k]].concat(pick(all, 3, [DEV[k]])), a: DEV[k] };
+            },
+            path: function (k) {
+                var right = PATHS[PAGES[k].game].name, names = Object.keys(PATHS).map(function (p) { return PATHS[p].name; });
+                return { q: "On the map, which path is <b>" + title(k) + "</b> filed under?", opts: [right].concat(pick(names, 3, [right])), a: right };
+            },
+            first: function (k) {
+                var group = [k], years = [PAGES[k].y];
+                shuffle(Object.keys(PAGES)).forEach(function (x) { if (group.length < 4 && years.indexOf(PAGES[x].y) < 0) { group.push(x); years.push(PAGES[x].y); } });
+                var oldest = group.reduce(function (m, x) { return PAGES[x].y < PAGES[m].y ? x : m; });
+                return { q: "Which of these was released <b>first</b>?", opts: group.map(title), a: title(oldest) };
+            },
+            pioneer: function () {
+                var p = PIONEERS[(Math.random() * PIONEERS.length) | 0], names = PIONEERS.map(function (x) { return x[1]; });
+                return { q: "Which pioneer is linked to <b>" + p[0] + "</b>?", opts: [p[1]].concat(pick(names, 3, [p[1]])), a: p[1], pioneer: true };
+            }
+        };
+        function buildQuestions() {
+            var read = Object.keys(PAGES).filter(function (k) { return S.pages.indexOf(k) >= 0; });
+            var rest = shuffle(Object.keys(PAGES).filter(function (k) { return read.indexOf(k) < 0; }));
+            var pool = shuffle(read.slice()).concat(rest); // read entries first
+            var types = ["year", "dev", "path", "first", "year", "dev", "path", "year", "dev", "first", "path", "year", "dev", "path"];
+            var out = types.map(function (t, i) { var q = Q[t](pool[i % pool.length]); q.opts = shuffle(q.opts); return q; });
+            out.splice(3, 0, (function () { var q = Q.pioneer(); q.opts = shuffle(q.opts); return q; })());
+            return out;
+        }
+
+        function unlocked() { return S.paths.length >= 7; }
+        window.fxBossState = function () { return { open: unlocked(), have: S.paths.length }; };
+
+        function openBoss() {
+            if (!unlocked()) {
+                openModal("THE FINAL ARCHIVE // LOCKED",
+                    '<div class="fx-modal-head"><div><span class="fx-label">NODE // 08 // LOCKED</span><h2>THE FINAL<br><span>ARCHIVE.</span></h2>' +
+                    "<p>The Archive Guardian only appears once you have opened all seven paths. You have opened <b>" + S.paths.length + " of 7</b>.</p></div>" +
+                    '<img class="px" src="assets/img/trophy.png" alt="" style="filter:grayscale(1);opacity:.4"></div>' +
+                    '<div class="fx-modal-body"><p class="fx-sub">// PATHS</p><div class="fx-paths">' +
+                    Object.keys(PATHS).map(function (p) { return '<span class="fx-pchip' + (S.paths.indexOf(p) >= 0 ? " on" : "") + '" data-fx-path="' + p + '" style="cursor:pointer"><img class="px" src="assets/img/' + p + '.png" alt="">' + PATHS[p].name + "</span>"; }).join("") +
+                    "</div><p style=\"font-size:12px;margin-top:14px\">Click a grey path to open it.</p></div>");
+                return;
+            }
+            var qs, qi, hp, lives, score, streak, timer, locked, t0;
+            function intro() {
+                openModal("THE FINAL ARCHIVE // NODE 08",
+                    '<div class="fx-modal-head"><div><span class="fx-label">BOSS // THE ARCHIVE GUARDIAN</span><h2>THE FINAL<br><span>ARCHIVE.</span></h2>' +
+                    "<p>Answer questions from across the archive. Each right answer deals one hit to the Guardian (" + GUARD_HP + " HP). Each wrong answer, or running out of time, costs you a heart. You have " + LIVES + ". Questions favour the entries you've read.</p></div>" +
+                    '<img class="px" src="assets/img/trophy.png" alt=""></div>' +
+                    '<div class="fx-modal-body"><div class="fx-stats"><div>BEST SCORE<b>' + (S.bossBest || 0) + "</b></div><div>VICTORIES<b>" + (S.bossWins || 0) + '</b></div><div>ENTRIES READ<b>' + S.pages.filter(function (p) { return PAGES[p]; }).length + "/" + TOTAL + '</b></div></div>' +
+                    '<div class="fx-actions"><button type="button" class="fx-btn blue" id="fxBossGo">▶ BEGIN [ENTER]</button></div><p style="font-size:11px;color:#777;margin-top:12px">Keys 1 – 4 answer. ' + TIME + " seconds per question.</p></div>");
+                $("#fxBossGo").addEventListener("click", start);
+                $("#fxBossGo").focus();
+            }
+            function start() {
+                qs = buildQuestions(); qi = 0; hp = GUARD_HP; lives = LIVES; score = 0; streak = 0;
+                mBody.innerHTML =
+                    '<div class="fx-boss">' +
+                    '<div class="fx-boss-top"><div class="fx-guard-wrap"><div class="fx-guard" id="fxGuard"><i></i><i></i><b></b></div><span class="fx-tag">ARCHIVE GUARDIAN</span><div class="fx-ghp" id="fxGHp"></div></div>' +
+                    '<div class="fx-boss-side"><span class="fx-tag">YOU</span><div class="fx-hp" id="fxLives"></div><div class="fx-stats"><div>SCORE<b id="fxBScore">0</b></div><div>STREAK<b id="fxStreak">0</b></div></div></div></div>' +
+                    '<div class="fx-timer"><i id="fxTimer"></i></div>' +
+                    '<p class="fx-qn" id="fxQn"></p><p class="fx-q" id="fxQ"></p><div class="fx-opts" id="fxOpts"></div></div>';
+                mBody.querySelector("#fxOpts").addEventListener("click", function (e) { var b = e.target.closest("[data-o]"); if (b) answer(+b.dataset.o); });
+                render(); ask();
+            }
+            function render() {
+                $("#fxGHp").innerHTML = Array.from({ length: GUARD_HP }, function (_, i) { return '<i class="' + (i < hp ? "on" : "") + '"></i>'; }).join("");
+                $("#fxLives").innerHTML = Array.from({ length: LIVES }, function (_, i) { return '<img class="px" src="assets/img/heart.png" alt="" style="opacity:' + (i < lives ? 1 : 0.15) + '">'; }).join("");
+                $("#fxBScore").textContent = score; $("#fxStreak").textContent = streak ? "×" + streak : "0";
+            }
+            function ask() {
+                if (qi >= qs.length) qs = qs.concat(buildQuestions()); // never run dry
+                var q = qs[qi]; locked = false;
+                $("#fxQn").textContent = "QUESTION " + pad(qi + 1) + " // GUARDIAN HP " + hp + "/" + GUARD_HP;
+                $("#fxQ").innerHTML = q.q;
+                $("#fxOpts").innerHTML = q.opts.map(function (o, i) { return '<button type="button" class="fx-opt" data-o="' + i + '"><span>' + (i + 1) + "</span>" + o + "</button>"; }).join("");
+                var bar = $("#fxTimer"); bar.style.transition = "none"; bar.style.width = "100%"; void bar.offsetWidth;
+                bar.style.transition = "width " + TIME + "s linear"; bar.style.width = "0%";
+                t0 = performance.now();
+                clearTimeout(timer); timer = setTimeout(function () { answer(-1); }, TIME * 1000);
+            }
+            function answer(i) {
+                if (locked) return; locked = true; clearTimeout(timer);
+                var q = qs[qi], btns = $$(".fx-opt", mBody), right = q.opts.indexOf(q.a);
+                var bar = $("#fxTimer"); bar.style.transition = "none"; bar.style.width = getComputedStyle(bar).width;
+                btns.forEach(function (b, n) { b.disabled = true; if (n === right) b.classList.add("right"); });
+                if (i === right) {
+                    hp--; streak++;
+                    var secs = (performance.now() - t0) / 1000, gain = 100 + Math.round(Math.max(0, TIME - secs) * 10) + (streak - 1) * 25;
+                    score += gain; sfx.bit();
+                    var g = $("#fxGuard"); g.classList.remove("hit"); void g.offsetWidth; g.classList.add("hit");
+                    var c = center(g); sparks(c[0], c[1], 22); xpPop(gain, c[0], c[1] - 40);
+                } else {
+                    lives--; streak = 0; sfx.bad();
+                    if (i >= 0) btns[i].classList.add("wrong");
+                    var card = $(".fx-boss", mBody); card.classList.remove("ouch"); void card.offsetWidth; card.classList.add("ouch");
+                    if (i < 0) $("#fxQn").textContent = "TIME UP // THE GUARDIAN STRIKES";
+                }
+                render();
+                setTimeout(function () {
+                    if (hp <= 0) return finish(true);
+                    if (lives <= 0) return finish(false);
+                    qi++; ask();
+                }, 1100);
+            }
+            function finish(won) {
+                clearTimeout(timer);
+                if (won) score += lives * 250;
+                var best = S.bossBest || 0; if (score > best) { S.bossBest = score; }
+                if (won) S.bossWins = (S.bossWins || 0) + 1;
+                save();
+                var rank = !won ? "—" : lives === 3 && score >= 2600 ? "S" : lives >= 2 && score >= 2000 ? "A" : score >= 1500 ? "B" : "C";
+                mBody.innerHTML = '<div class="fx-modal-head"><div><span class="fx-label">' + (won ? "ARCHIVE CLEARED // RANK " + rank : "THE ARCHIVE HOLDS") + "</span><h2>" +
+                    (won ? "GUARDIAN<br><span>DEFEATED.</span>" : "TRY<br><span>AGAIN.</span>") + "</h2><p>" +
+                    (won ? "You proved your knowledge of the whole archive. " + (lives > 0 ? "Remaining hearts were worth +" + lives * 250 + "." : "")
+                         : "The Guardian had " + hp + " HP left. Read more entries: questions favour the pages you've visited.") +
+                    '</p></div><img class="px" src="assets/img/' + (won ? "trophy" : "heart") + '.png" alt=""></div>' +
+                    '<div class="fx-modal-body"><div class="fx-stats"><div>SCORE<b>' + score + "</b></div><div>BEST<b>" + (S.bossBest || 0) + "</b></div><div>RANK<b>" + rank + "</b></div><div>VICTORIES<b>" + (S.bossWins || 0) + "</b></div></div>" +
+                    '<div class="fx-actions"><button type="button" class="fx-btn blue" id="fxBossAgain">↻ CHALLENGE AGAIN</button></div></div>';
+                $("#fxBossAgain").addEventListener("click", start);
+                if (won) { unlock("boss"); sfx.win(); addXP(100); [0, 250, 500].forEach(function (d) { setTimeout(function () { sparks(innerWidth * (0.3 + Math.random() * 0.4), innerHeight * (0.3 + Math.random() * 0.3), 30); }, d); }); }
+            }
+            intro();
+            stopMini = function () { clearTimeout(timer); };
+            var onKey = keyGuard(function (e) {
+                if (e.key === "Enter" && $("#fxBossGo")) { e.preventDefault(); start(); return; }
+                var i = ["1", "2", "3", "4"].indexOf(e.key);
+                if (i >= 0 && $("#fxOpts")) { e.preventDefault(); answer(i); }
+            });
+            addEventListener("keydown", onKey);
+            var prevStop = stopMini;
+            stopMini = function () { prevStop(); removeEventListener("keydown", onKey); };
+        }
+        window.fxOpenBoss = openBoss;
+
+        window.fxUpdateBoss = function () {
+            var n = $(".fx-final"); if (!n) return;
+            var open = unlocked();
+            n.classList.toggle("fx-locked", !open);
+            $("#fxFinalDesc").textContent = open ? "Boss // Exam // All 26 entries" : "Locked // " + S.paths.length + "/7 paths opened";
+            $("#fxFinalEnter").textContent = open ? "FACE THE GUARDIAN →" : "OPEN ALL 7 PATHS";
+            var core = $(".fx-w-core small"); if (core) core.textContent = open ? "▶ FINAL ARCHIVE // CLICK" : "FINAL ARCHIVE // " + S.paths.length + "/7";
+            $$(".fx-w-core").forEach(function (c) { c.classList.toggle("fx-open", open); });
+        };
+        window.fxUpdateBoss();
+        index.push({ l: "The Final Archive (boss)", s: "NODE // 08", boss: true });
     })();
 
     /* ---------------------------------------------------------

@@ -417,6 +417,54 @@ img.px { image-rendering: pixelated; }
     .fx-w-info { width: auto; right: 16px; }
 }
 
+
+/* ---------- the final archive (boss) ---------- */
+.mechanic-node.node-final { top: 470px; left: 64%; }
+.node-final .node-dot { border-style: double; border-width: 4px; width: 16px; height: 16px; }
+.node-final.fx-locked { opacity: .45; }
+.node-final.fx-locked .node-dot { border-style: dashed; border-width: 2px; }
+.node-final:not(.fx-locked) .node-dot { background: var(--ink); animation: fx-boss-pulse 1.6s ease-in-out infinite; }
+@keyframes fx-boss-pulse { 50% { box-shadow: 0 0 0 7px rgba(0,132,255,.25); background: var(--blue); } }
+.fx-w-core.fx-open { cursor: pointer; animation: fx-boss-glow 2s ease-in-out infinite; }
+@keyframes fx-boss-glow { 50% { box-shadow: 8px 8px 0 var(--blue), 0 0 0 10px rgba(0,132,255,.15); } }
+.fx-boss { animation: fx-in .3s; padding: 20px 22px 24px; }
+.fx-boss.ouch { animation: fx-ouch .45s; }
+@keyframes fx-ouch { 20% { transform: translateX(-10px); background: #fff0f0; } 50% { transform: translateX(8px); } 80% { transform: translateX(-4px); } }
+.fx-boss-top { display: grid; grid-template-columns: 1fr 260px; gap: 20px; align-items: center; margin-bottom: 16px; }
+.fx-guard-wrap { border: 1px solid var(--ink); padding: 16px; text-align: center; background:
+    linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 20px 20px, linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 20px 20px, #fff; }
+.fx-guard { position: relative; width: 84px; height: 84px; margin: 4px auto 12px; background: var(--ink); box-shadow: 8px 8px 0 var(--blue); animation: fx-hover 2.4s ease-in-out infinite; }
+.fx-guard i { position: absolute; top: 24px; width: 14px; height: 14px; background: var(--blue); animation: fx-eye 3s steps(1) infinite; }
+.fx-guard i:first-child { left: 18px; } .fx-guard i:nth-child(2) { right: 18px; }
+.fx-guard b { position: absolute; left: 22px; right: 22px; bottom: 18px; height: 6px; background: #fff; }
+.fx-guard.hit { animation: fx-ghit .5s; }
+@keyframes fx-hover { 50% { transform: translateY(-6px); } }
+@keyframes fx-eye { 0%, 92% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
+@keyframes fx-ghit { 15% { transform: translate(-8px, 2px) rotate(-6deg); background: #e5484d; } 45% { transform: translate(8px, -2px) rotate(5deg); } 75% { transform: translate(-3px, 0); } }
+.fx-ghp { display: flex; gap: 3px; justify-content: center; margin-top: 8px; }
+.fx-ghp i { width: 18px; height: 10px; border: 1px solid var(--ink); background: #fff; transition: background .3s; }
+.fx-ghp i.on { background: #e5484d; }
+.fx-boss-side { border: 1px solid var(--ink); padding: 12px; }
+.fx-boss-side .fx-stats { margin: 10px 0 0; }
+.fx-timer { height: 8px; border: 1px solid var(--ink); margin-bottom: 14px; background: #fff; }
+.fx-timer i { display: block; height: 100%; width: 100%; background: var(--blue); }
+.fx-qn { font-size: 10px; color: var(--blue); margin: 0 0 6px; letter-spacing: 1px; }
+.fx-q { font-size: 20px; line-height: 1.35; margin: 0 0 16px; }
+.fx-q b { color: var(--blue); }
+.fx-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.fx-opt { display: flex; gap: 12px; align-items: center; text-align: left; font: 14px Consolas, monospace; padding: 14px; border: 1px solid var(--ink); background: #fff; cursor: pointer; color: var(--ink); transition: transform .15s, box-shadow .15s, background .2s; }
+.fx-opt span { font-size: 10px; font-weight: bold; border: 1px solid var(--ink); padding: 2px 6px; flex: none; }
+.fx-opt:hover:not(:disabled) { transform: translate(-3px, -3px); box-shadow: 5px 5px 0 var(--blue); }
+.fx-opt.right { background: var(--blue); color: #fff; border-color: var(--blue); }
+.fx-opt.right span { border-color: #fff; }
+.fx-opt.wrong { background: #e5484d; color: #fff; border-color: #e5484d; }
+.fx-opt:disabled { cursor: default; }
+@media (max-width: 760px) {
+    .fx-boss-top { grid-template-columns: 1fr; }
+    .fx-opts { grid-template-columns: 1fr; }
+    .mechanic-node.node-final { left: 58%; }
+}
+
 /* ---------- terminal mode (secret) ---------- */
 html.fx-terminal body { background: #0d1117 !important; color: #9cdcfe !important; }
 html.fx-terminal body * { border-color: #30363d !important; }
