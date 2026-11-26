@@ -1,6 +1,6 @@
 # Gaming Map Revamp
 
-The [Historical Gaming Map](https://github.com/mikey101101/Gaming-Map) with an interactive layer on top. The original pages, layout and styling are unchanged. Every page loads `enhance.css` and `enhance.js`, which add:
+The [Historical Gaming Map](https://github.com/Mikey-0000/Gaming-Map) with an interactive layer on top. The original pages, layout and styling are unchanged. Every page loads `enhance.css` and `enhance.js`, which add:
 
 - **Animated maps.** Connection lines draw in and nodes pop in. A crosshair with X/Y coordinates follows the mouse. Unvisited nodes pulse and visited ones get a ✓.
 - **Walk the Map.** Press ▶ WALK THE MAP, move the blue square with the arrow keys or WASD, collect the 10 data bits, and press Enter on a node to open it. Phones get an on-screen d-pad.
