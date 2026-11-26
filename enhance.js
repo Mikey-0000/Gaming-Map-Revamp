@@ -104,7 +104,8 @@
         jump:     ["Airborne", "Scored 500 in Jump mode."],
         fight:    ["Champion", "Beat the Archive Sentinel in Fight mode."],
         run:      ["Afterburner", "Lasted 30 seconds in Run mode."],
-        time:     ["Time Traveller", "Scrubbed through all of gaming history."]
+        time:     ["Time Traveller", "Scrubbed through all of gaming history."],
+        world:    ["World Mapper", "Visited all 7 paths on the World Map."]
     };
 
     /* ---------------------------------------------------------
@@ -172,6 +173,7 @@
         '<div class="fx-hud-prog"><span class="fx-hud-label">ARCHIVE // </span><b id="fxLv">LV 1</b> · <span id="fxRead">00/12</span> ENTRIES<div class="fx-hud-bar"><i id="fxBar"></i></div></div>' +
         '<button type="button" id="fxSearchBtn" aria-label="Search the archive (press /)">/ SEARCH</button>' +
         '<button type="button" id="fxTrophyBtn" aria-label="Achievements">★ <span class="fx-count" id="fxAchCount">0</span></button>' +
+        '<button type="button" id="fxWorldBtn" aria-label="Open the World Map (press M)">⌖ WORLD</button>' +
         '<button type="button" id="fxSoundBtn" aria-pressed="false" aria-label="Toggle sound">SND OFF</button>';
     document.body.appendChild(hud);
     function pad(n) { return (n < 10 ? "0" : "") + n; }
@@ -269,6 +271,7 @@
     }
     function openFile(k, from) {
         var g = FILES[k];
+        S.files = S.files || []; if (S.files.indexOf(k) < 0) { S.files.push(k); save(); }
         var back = from ? '<button type="button" class="fx-btn" data-fx-path="' + from + '">← BACK TO ' + PATHS[from].name + "</button>" : "";
         openModal("FILE // " + g.t.toUpperCase(),
             '<div class="fx-modal-head"><div><span class="fx-label">ARCHIVE FILE // ' + g.g.toUpperCase() + " // " + g.y + "</span><h2>" + g.t.toUpperCase() + "</h2><p>" + g.s + "</p></div></div>" +
@@ -302,7 +305,7 @@
     function go(i) {
         var r = res[i]; if (!r) return;
         closeSearch(); unlock("search");
-        if (r.h) navigate(r.h); else if (r.path) openPath(r.path); else openFile(r.file);
+        if (r.h) navigate(r.h); else if (r.path) openPath(r.path); else if (r.world) window.fxOpenWorld(); else openFile(r.file);
     }
     q.addEventListener("input", function () { sel = 0; renderSearch(); });
     q.addEventListener("keydown", function (e) {
@@ -524,7 +527,7 @@
             if (b.dataset.d === "enter") enter(); else { var d = b.dataset.d.split(","); move(+d[0], +d[1]); }
         });
         addEventListener("keydown", function (e) {
-            if (!playing || !modal.hidden || !srch.hidden) return;
+            if (!playing || !modal.hidden || !srch.hidden || worldOpen) return;
             var k = e.key, d = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0], w: [0, -1], s: [0, 1], a: [-1, 0], d: [1, 0], W: [0, -1], S: [0, 1], A: [-1, 0], D: [1, 0] }[k];
             if (d) { e.preventDefault(); move(d[0], d[1]); }
             else if (k === "Enter" || k === " ") { e.preventDefault(); enter(); }
@@ -1117,6 +1120,256 @@
         });
         setYear(MAX, true);
     }
+
+    /* ---------------------------------------------------------
+       WORLD MAP: one zoomable grid holding every path, genre
+       and game. Drag to pan, scroll / pinch / +- to zoom.
+       --------------------------------------------------------- */
+    var worldOpen = false;
+    (function () {
+        var WG = {
+            explore: [["Adventure", "adventure.html", ["zelda", "uncharted2", "lifeisstrange"]], ["Open World", "openworld.html", ["gta3", "skyrim", "breathofthewild"]]],
+            solve:   [["Puzzle", null, ["tetris", "myst", "portal"]]],
+            jump:    [["Platformer", null, ["smb", "sonic", "celeste"]]],
+            build:   [["Sandbox", "genre.html", ["minecraft", "terraria", "gta5"]], ["Management", null, ["simcity", "rct"]]],
+            fight:   [["Fighting", null, ["sf2"]], ["Shooter", null, ["doom"]], ["Action RPG", null, ["darksouls"]]],
+            run:     [["Maze Chase", null, ["pacman"]], ["Racing", null, ["granturismo"]], ["Endless Runner", null, ["templerun"]]],
+            survive: [["Survival", "survival.html", ["residentevil", "dontstarve", "subnautica"]]]
+        };
+        var SIZE = 2800, C = SIZE / 2, nodes = [], links = [];
+        var pathIds = Object.keys(PATHS);
+        pathIds.forEach(function (pid, i) {
+            var a = -Math.PI / 2 + i / pathIds.length * Math.PI * 2;
+            var px = C + Math.cos(a) * 620, py = C + Math.sin(a) * 620;
+            var pn = { id: "p-" + pid, kind: "path", pid: pid, x: px, y: py, a: a, label: PATHS[pid].name, sub: "PATH " + PATHS[pid].n + " // " + PATHS[pid].tag.toUpperCase(), text: PATHS[pid].text };
+            nodes.push(pn); links.push([{ x: C, y: C }, pn]);
+            var gs = WG[pid];
+            gs.forEach(function (g, j) {
+                var ga = a + (gs.length === 1 ? 0 : (j / (gs.length - 1) - 0.5) * 0.95);
+                var gx = px + Math.cos(ga) * 330, gy = py + Math.sin(ga) * 330;
+                var gn = { id: "g-" + pid + j, kind: "genre", pid: pid, x: gx, y: gy, label: g[0], href: g[1], sub: "GENRE // " + g[2].length + " GAME" + (g[2].length > 1 ? "S" : ""), kids: g[2] };
+                nodes.push(gn); links.push([pn, gn]);
+                g[2].forEach(function (k, m) {
+                    var ka = ga + (g[2].length === 1 ? 0 : (m / (g[2].length - 1) - 0.5) * 1.5);
+                    var info = PAGES[k] || FILES[k];
+                    var kn = { id: "k-" + k, kind: "game", pid: pid, key: k, x: gx + Math.cos(ka) * 175, y: gy + Math.sin(ka) * 175, label: info.t, sub: info.y + " // " + (PAGES[k] ? "ARCHIVE ENTRY" : "ARCHIVE FILE"), year: info.y, page: !!PAGES[k] };
+                    nodes.push(kn); links.push([gn, kn]);
+                });
+            });
+        });
+
+        var ov = el("div", "fx-world");
+        ov.hidden = true;
+        ov.setAttribute("role", "dialog"); ov.setAttribute("aria-label", "World map");
+        ov.innerHTML =
+            '<div class="fx-w-top"><span><b>WORLD MAP</b> // DRAG TO PAN · SCROLL OR PINCH TO ZOOM · CLICK A NODE</span><span id="fxWDisc"></span><button type="button" class="fx-close" data-w="close">CLOSE [ESC]</button></div>' +
+            '<div class="fx-w-view" id="fxWView" tabindex="0"><div class="fx-w-plane" id="fxWPlane" style="width:' + SIZE + "px;height:" + SIZE + 'px">' +
+            '<svg class="fx-w-links" width="' + SIZE + '" height="' + SIZE + '" aria-hidden="true">' +
+            [300, 620, 950, 1180].map(function (r) { return '<circle cx="' + C + '" cy="' + C + '" r="' + r + '" fill="none" stroke="#e2e2e2" stroke-dasharray="4 8"/>'; }).join("") +
+            links.map(function (l) { return '<line data-to="' + l[1].id + '" data-pid="' + l[1].pid + '" x1="' + l[0].x + '" y1="' + l[0].y + '" x2="' + l[1].x + '" y2="' + l[1].y + '"/>'; }).join("") + "</svg>" +
+            '<div class="fx-w-core" style="left:' + C + "px;top:" + C + 'px"><span>GAMING</span><span>HISTORY</span><small>1952 — PRESENT</small></div>' +
+            nodes.map(function (n) {
+                return '<button type="button" class="fx-wn ' + n.kind + '" data-id="' + n.id + '" style="left:' + n.x + "px;top:" + n.y + 'px" aria-label="' + n.label + '">' +
+                    (n.kind === "path" ? '<img class="px" src="assets/img/' + n.pid + '.png" alt="">' : '<i class="fx-wdot"></i>') +
+                    '<span class="fx-wl"><b>' + n.label + "</b><small>" + n.sub + "</small></span></button>";
+            }).join("") + "</div></div>" +
+            '<div class="fx-w-zoom"><button type="button" data-w="in" aria-label="Zoom in">+</button><button type="button" data-w="out" aria-label="Zoom out">−</button><button type="button" data-w="fit" aria-label="Show everything">⌂</button></div>' +
+            '<div class="fx-w-mini"><canvas id="fxWMini" width="150" height="150" aria-label="Minimap"></canvas><span id="fxWZoom">ZOOM // 100%</span></div>' +
+            '<div class="fx-w-info" id="fxWInfo"></div>';
+        document.body.appendChild(ov);
+
+        var view = $("#fxWView"), plane = $("#fxWPlane"), info = $("#fxWInfo"), mini = $("#fxWMini"), mctx = mini.getContext("2d");
+        var tx = 0, ty = 0, k = 1, anim = 0, selected = null;
+        var byId = {}; nodes.forEach(function (n) { byId[n.id] = n; });
+
+        function seen(n) {
+            if (n.kind === "path") return S.paths.indexOf(n.pid) >= 0;
+            if (n.kind === "genre") return n.href ? S.pages.indexOf(n.href.replace(".html", "")) >= 0 : n.kids.some(function (kk) { return (S.files || []).indexOf(kk) >= 0; });
+            return n.page ? S.pages.indexOf(n.key) >= 0 : (S.files || []).indexOf(n.key) >= 0;
+        }
+        function refreshSeen() {
+            $$(".fx-wn", plane).forEach(function (b) { b.classList.toggle("seen", seen(byId[b.dataset.id])); });
+            var games = nodes.filter(function (n) { return n.kind === "game"; });
+            $("#fxWDisc").textContent = "DISCOVERED // " + pad(games.filter(seen).length) + "/" + games.length + " GAMES";
+        }
+        function apply() {
+            plane.style.transform = "translate(" + tx + "px," + ty + "px) scale(" + k + ")";
+            plane.style.setProperty("--lp", Math.max(1, 0.55 / k));
+            plane.style.setProperty("--lg", Math.max(1, 0.8 / k));
+            plane.classList.toggle("z-genre", k >= 0.42);
+            plane.classList.toggle("z-game", k >= 0.72);
+            plane.classList.toggle("z-detail", k >= 1.5);
+            $("#fxWZoom").textContent = "ZOOM // " + Math.round(k * 100) + "%";
+            drawMini();
+        }
+        function clampK(v) { return Math.max(0.15, Math.min(3, v)); }
+        function zoomAt(f, cx, cy) {
+            var nk = clampK(k * f); f = nk / k;
+            tx = cx - (cx - tx) * f; ty = cy - (cy - ty) * f; k = nk; apply();
+        }
+        function fitK() { return Math.min(view.clientWidth, view.clientHeight) / 2700; }
+        function flyTo(x, y, nk, ms) {
+            cancelAnimationFrame(anim);
+            var vw = view.clientWidth, vh = view.clientHeight;
+            var s0 = { x: tx, y: ty, k: k }, s1k = clampK(nk), s1 = { x: vw / 2 - x * s1k, y: vh / 2 - y * s1k, k: s1k };
+            if (reduced || !ms) { tx = s1.x; ty = s1.y; k = s1.k; apply(); return; }
+            var t0 = performance.now();
+            (function step(t) {
+                var p = Math.min(1, (t - t0) / ms), e = p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+                tx = s0.x + (s1.x - s0.x) * e; ty = s0.y + (s1.y - s0.y) * e; k = s0.k + (s1.k - s0.k) * e; apply();
+                if (p < 1) anim = requestAnimationFrame(step);
+            })(t0);
+        }
+        // centre between a node and the branch growing out of it
+        function focusNode(n, ms) {
+            var dx = n.x - C, dy = n.y - C, d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d;
+            if (n.kind === "path") flyTo(n.x + ux * 230, n.y + uy * 230, 0.8, ms);
+            else if (n.kind === "genre") flyTo(n.x + ux * 80, n.y + uy * 80, 1.35, ms);
+            else flyTo(n.x, n.y, Math.max(k, 1.7), ms);
+        }
+        function drawMini() {
+            var s = 150 / SIZE;
+            mctx.fillStyle = "#ffffff"; mctx.fillRect(0, 0, 150, 150);
+            nodes.forEach(function (n) {
+                mctx.fillStyle = n.kind === "path" ? "#0084ff" : seen(n) ? "#0084ff" : "#bbbbbb";
+                var r = n.kind === "path" ? 3 : n.kind === "genre" ? 2 : 1.5;
+                mctx.fillRect(n.x * s - r, n.y * s - r, r * 2, r * 2);
+            });
+            mctx.strokeStyle = "#222222"; mctx.lineWidth = 1.5;
+            mctx.strokeRect(-tx / k * s, -ty / k * s, view.clientWidth / k * s, view.clientHeight / k * s);
+        }
+        mini.addEventListener("pointerdown", function (e) {
+            var r = mini.getBoundingClientRect();
+            flyTo((e.clientX - r.left) / r.width * SIZE, (e.clientY - r.top) / r.height * SIZE, k, 350);
+        });
+
+        function select(n) {
+            selected = n;
+            $$(".fx-wn.sel", plane).forEach(function (b) { b.classList.remove("sel"); });
+            $$("line.hot", plane).forEach(function (l) { l.classList.remove("hot"); });
+            if (!n) { info.innerHTML = '<span class="fx-label">// SELECT A NODE</span><p>Paths sit on the inner ring, genres branch outward, and games sit at the edge. Zoom in to read more.</p>'; return; }
+            $('.fx-wn[data-id="' + n.id + '"]', plane).classList.add("sel");
+            $$('line[data-pid="' + n.pid + '"]', plane).forEach(function (l) { l.classList.add("hot"); });
+            var acts = "";
+            if (n.kind === "path") {
+                if (S.paths.indexOf(n.pid) < 0) { S.paths.push(n.pid); save(); addXP(15); unlock("path"); if (S.paths.length >= 7) unlock("allPaths"); }
+                S.worldPaths = S.worldPaths || []; if (S.worldPaths.indexOf(n.pid) < 0) { S.worldPaths.push(n.pid); save(); if (S.worldPaths.length >= 7) unlock("world"); }
+                acts = '<button type="button" class="fx-btn blue" data-w="path">' + (MINI[n.pid] ? "▶ PLAY " + n.label : "OPEN PATH") + "</button>";
+                if (PATHS[n.pid].page) acts += '<button type="button" class="fx-btn" data-w="go" data-href="' + PATHS[n.pid].page + '">FULL PATH PAGE →</button>';
+            } else if (n.kind === "genre") {
+                acts = n.href ? '<button type="button" class="fx-btn blue" data-w="go" data-href="' + n.href + '">OPEN GENRE PAGE →</button>' : "";
+            } else {
+                acts = n.page ? '<button type="button" class="fx-btn blue" data-w="go" data-href="' + n.key + '.html">VIEW ENTRY →</button>' : '<button type="button" class="fx-btn blue" data-w="file">OPEN FILE →</button>';
+            }
+            var desc = n.text || (n.kind === "genre" ? "Games: " + n.kids.map(function (kk) { return (PAGES[kk] || FILES[kk]).t; }).join(", ") + "." : (PAGES[n.key] ? PAGES[n.key].g + " // entry " + PAGES[n.key].e : FILES[n.key].s));
+            info.innerHTML = '<span class="fx-label">' + n.kind.toUpperCase() + " // " + PATHS[n.pid].name + '</span><h3>' + n.label + "</h3><p>" + n.sub + "</p><p>" + desc + '</p><div class="fx-actions">' + acts + "</div>";
+            refreshSeen(); sfx.tick();
+        }
+        info.addEventListener("click", function (e) {
+            var b = e.target.closest("[data-w]"); if (!b || !selected) return;
+            if (b.dataset.w === "go") { closeWorld(); navigate(b.dataset.href); }
+            else if (b.dataset.w === "path") openPath(selected.pid);
+            else if (b.dataset.w === "file") { openFile(selected.key, selected.pid); refreshSeen(); }
+        });
+
+        /* pan, zoom, click */
+        var ptrs = {}, dragStart = null, moved = false, pinch = null;
+        view.addEventListener("pointerdown", function (e) {
+            view.setPointerCapture(e.pointerId);
+            ptrs[e.pointerId] = { x: e.clientX, y: e.clientY };
+            var ids = Object.keys(ptrs);
+            if (ids.length === 1) { dragStart = { x: e.clientX, y: e.clientY, tx: tx, ty: ty }; moved = false; cancelAnimationFrame(anim); }
+            if (ids.length === 2) { var a = ptrs[ids[0]], b = ptrs[ids[1]]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), k: k }; moved = true; }
+        });
+        view.addEventListener("pointermove", function (e) {
+            if (!ptrs[e.pointerId]) return;
+            ptrs[e.pointerId] = { x: e.clientX, y: e.clientY };
+            var ids = Object.keys(ptrs), r = view.getBoundingClientRect();
+            if (ids.length === 2 && pinch) {
+                var a = ptrs[ids[0]], b = ptrs[ids[1]], d = Math.hypot(a.x - b.x, a.y - b.y);
+                zoomAt(clampK(pinch.k * d / pinch.d) / k, (a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top);
+            } else if (dragStart) {
+                var dx = e.clientX - dragStart.x, dy = e.clientY - dragStart.y;
+                if (Math.abs(dx) + Math.abs(dy) > 4) moved = true;
+                if (moved) { tx = dragStart.tx + dx; ty = dragStart.ty + dy; apply(); view.classList.add("grabbing"); }
+            }
+        });
+        function up(e) {
+            delete ptrs[e.pointerId];
+            if (Object.keys(ptrs).length < 2) pinch = null;
+            if (!Object.keys(ptrs).length) {
+                view.classList.remove("grabbing");
+                if (!moved && dragStart) {
+                    var hit = document.elementFromPoint(e.clientX, e.clientY), b = hit && hit.closest(".fx-wn");
+                    if (b) {
+                        var n = byId[b.dataset.id]; select(n);
+                        focusNode(n, 600);
+                    } else select(null);
+                }
+                dragStart = null;
+            }
+        }
+        view.addEventListener("pointerup", up);
+        view.addEventListener("pointercancel", up);
+        view.addEventListener("wheel", function (e) {
+            e.preventDefault(); cancelAnimationFrame(anim);
+            var r = view.getBoundingClientRect();
+            zoomAt(Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0018)), e.clientX - r.left, e.clientY - r.top);
+        }, { passive: false });
+        ov.addEventListener("click", function (e) {
+            var b = e.target.closest("[data-w]"); if (!b || info.contains(b)) return;
+            var w = b.dataset.w, cx = view.clientWidth / 2, cy = view.clientHeight / 2;
+            if (w === "close") closeWorld();
+            else if (w === "in") zoomAt(1.4, cx, cy);
+            else if (w === "out") zoomAt(1 / 1.4, cx, cy);
+            else if (w === "fit") { select(null); flyTo(C, C, fitK(), 600); }
+        });
+        // keyboard: arrows pan, +/- zoom, Enter on focused node, Esc closes
+        addEventListener("keydown", function (e) {
+            if (!worldOpen || !modal.hidden || !srch.hidden) return;
+            var cx = view.clientWidth / 2, cy = view.clientHeight / 2, P = 80;
+            if (e.key === "Escape") { closeWorld(); return; }
+            if (e.key === "+" || e.key === "=") { zoomAt(1.25, cx, cy); e.preventDefault(); }
+            else if (e.key === "-" || e.key === "_") { zoomAt(0.8, cx, cy); e.preventDefault(); }
+            else if (e.key === "ArrowLeft") { tx += P; apply(); e.preventDefault(); }
+            else if (e.key === "ArrowRight") { tx -= P; apply(); e.preventDefault(); }
+            else if (e.key === "ArrowUp") { ty += P; apply(); e.preventDefault(); }
+            else if (e.key === "ArrowDown") { ty -= P; apply(); e.preventDefault(); }
+            else if (e.key === "Enter" && document.activeElement && document.activeElement.classList.contains("fx-wn")) {
+                var n = byId[document.activeElement.dataset.id]; select(n); focusNode(n, 500); e.preventDefault();
+            }
+        });
+        addEventListener("resize", function () { if (worldOpen) apply(); });
+
+        var prevOverflow = "";
+        function openWorld() {
+            if (worldOpen) return;
+            worldOpen = true; ov.hidden = false; prevOverflow = document.body.style.overflow; document.body.style.overflow = "hidden";
+            refreshSeen(); select(null);
+            var fk = fitK(); tx = view.clientWidth / 2 - C * fk * 0.6; ty = view.clientHeight / 2 - C * fk * 0.6; k = fk * 0.6; apply();
+            flyTo(C, C, fk, reduced ? 0 : 900);
+            view.focus(); sfx.open();
+        }
+        function closeWorld() {
+            if (!worldOpen) return;
+            worldOpen = false; ov.hidden = true; document.body.style.overflow = prevOverflow; sfx.close && sfx.close();
+            var b = $("#fxWorldBtn"); if (b) b.focus();
+        }
+        window.fxOpenWorld = openWorld;
+        $("#fxWorldBtn").addEventListener("click", openWorld);
+        addEventListener("keydown", function (e) {
+            if (worldOpen || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName || "") || !modal.hidden || !srch.hidden) return;
+            if ((e.key === "m" || e.key === "M") && !e.metaKey && !e.ctrlKey && !e.altKey) { e.preventDefault(); openWorld(); }
+        });
+        // a World Map button beside each map's Walk button
+        $$(".fx-play-btn").forEach(function (pb) {
+            var wb = el("button", "fx-play-btn fx-world-btn", "⌖ WORLD MAP"); wb.type = "button"; wb.title = "Zoomable map of every path, genre and game (M)";
+            wb.addEventListener("click", function (e) { e.stopPropagation(); openWorld(); });
+            pb.parentNode.insertBefore(wb, pb.nextSibling);
+        });
+        // searchable too
+        index.push({ l: "World Map", s: "MODE // PRESS M", world: true });
+    })();
 
     /* ---------------------------------------------------------
        KEYBOARD: search, escape, secret code

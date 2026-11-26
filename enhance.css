@@ -349,6 +349,74 @@ img.px { image-rendering: pixelated; }
 .fx-slider { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font-size: 10px; color: var(--muted); }
 .fx-slider input[type=range] { flex: 1; min-width: 200px; accent-color: #0084ff; height: 24px; }
 
+
+/* ---------- world map ---------- */
+.fx-world { position: fixed; inset: 0; z-index: 8600; background: var(--paper); font-family: Consolas, monospace; color: var(--ink); animation: fx-in .25s; }
+.fx-world[hidden] { display: none; }
+.fx-w-top { position: absolute; top: 0; left: 0; right: 0; z-index: 3; display: flex; gap: 16px; align-items: center; justify-content: space-between; padding: 10px 16px; background: #fff; border-bottom: 1px solid var(--ink); font-size: 10px; color: var(--muted); }
+.fx-w-top b { color: var(--ink); letter-spacing: 1px; }
+#fxWDisc { color: var(--blue); font-weight: bold; margin-left: auto; }
+.fx-w-view { position: absolute; inset: 43px 0 0 0; overflow: hidden; cursor: grab; touch-action: none; outline: none;
+    background-color: #fff; background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 50px 50px; }
+.fx-w-view.grabbing { cursor: grabbing; }
+.fx-w-plane { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; }
+.fx-w-links { position: absolute; inset: 0; overflow: visible; }
+.fx-w-links line { stroke: #bdbdbd; stroke-width: 1.5; transition: stroke .2s; }
+.fx-w-links line.hot { stroke: var(--blue); stroke-width: 2.5; stroke-dasharray: 8 6; animation: fx-wdash 1s linear infinite; }
+@keyframes fx-wdash { to { stroke-dashoffset: -28; } }
+.fx-w-core { position: absolute; transform: translate(-50%, -50%) scale(var(--lp, 1)); width: 150px; height: 150px; border: 2px solid var(--ink); background: #fff;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; letter-spacing: 1px; box-shadow: 8px 8px 0 var(--blue); }
+.fx-w-core small { font-size: 9px; color: var(--muted); margin-top: 6px; font-weight: normal; }
+
+.fx-wn { position: absolute; padding: 0; border: 0; background: none; cursor: pointer; font: inherit; color: inherit; transform: translate(-50%, -50%); }
+.fx-wn img { display: block; width: 44px; height: 44px; padding: 8px; background: #fff; border: 2px solid var(--ink); box-shadow: 5px 5px 0 var(--ink); transition: box-shadow .2s, transform .2s; }
+.fx-wn.path.seen img, .fx-wn.path:hover img, .fx-wn.path.sel img { box-shadow: 5px 5px 0 var(--blue); border-color: var(--blue); }
+.fx-wn:hover img { transform: translate(-2px, -2px); }
+.fx-wdot { display: block; width: 18px; height: 18px; background: #fff; border: 2px solid var(--ink); transition: background .2s, border-color .2s, transform .2s; }
+.fx-wn.game .fx-wdot { width: 12px; height: 12px; }
+.fx-wn.seen .fx-wdot { background: var(--blue); border-color: var(--blue); }
+.fx-wn:hover .fx-wdot, .fx-wn.sel .fx-wdot { transform: scale(1.4); border-color: var(--blue); box-shadow: 0 0 0 6px var(--hl); }
+.fx-wn.sel img { transform: scale(1.1); }
+.fx-wn:focus-visible { outline: 2px solid var(--blue); outline-offset: 6px; }
+.fx-wl { position: absolute; left: 100%; top: 50%; margin-left: 10px; transform-origin: 0 50%; white-space: nowrap; text-align: left; pointer-events: none; transition: opacity .25s; }
+.fx-wl b { display: block; letter-spacing: .5px; }
+.fx-wl small { display: block; color: var(--muted); font-size: 9px; margin-top: 3px; opacity: 0; transition: opacity .25s; }
+.fx-wn.path .fx-wl { transform: translateY(-50%) scale(var(--lp, 1)); }
+.fx-wn.path .fx-wl b { font-size: 26px; }
+.z-genre .fx-wn.path .fx-wl small { opacity: 1; }
+.fx-wn.genre .fx-wl { transform: translateY(-50%) scale(var(--lg, 1)); opacity: 0; }
+.fx-wn.genre .fx-wl b { font-size: 17px; }
+.fx-wn.game .fx-wl { transform: translateY(-50%); opacity: 0; }
+.fx-wn.game .fx-wl b { font-size: 13px; }
+.fx-wn.game { opacity: .55; transition: opacity .25s; }
+.fx-wn.genre { opacity: .7; transition: opacity .25s; }
+.z-genre .fx-wn.genre { opacity: 1; }
+.z-genre .fx-wn.genre .fx-wl { opacity: 1; }
+.z-game .fx-wn.game { opacity: 1; }
+.z-game .fx-wn.game .fx-wl { opacity: 1; }
+.z-game .fx-wn.genre .fx-wl small, .z-detail .fx-wn.game .fx-wl small { opacity: 1; }
+.fx-wn.sel .fx-wl { opacity: 1 !important; }
+.fx-wn.sel .fx-wl b { color: var(--blue); }
+
+.fx-w-zoom { position: absolute; right: 16px; top: 60px; z-index: 3; display: grid; border: 1px solid var(--ink); background: #fff; box-shadow: 4px 4px 0 var(--ink); }
+.fx-w-zoom button { width: 38px; height: 38px; border: 0; border-bottom: 1px solid var(--ink); background: #fff; font: bold 16px Consolas, monospace; cursor: pointer; }
+.fx-w-zoom button:last-child { border-bottom: 0; }
+.fx-w-zoom button:hover { background: var(--blue); color: #fff; }
+.fx-w-mini { position: absolute; right: 16px; bottom: 16px; z-index: 3; background: #fff; border: 1px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); }
+.fx-w-mini canvas { display: block; cursor: pointer; border-bottom: 1px solid var(--ink); }
+.fx-w-mini span { display: block; font-size: 9px; padding: 5px 8px; color: var(--blue); }
+.fx-w-info { position: absolute; left: 16px; bottom: 16px; z-index: 3; width: min(340px, calc(100vw - 210px)); background: #fff; border: 1px solid var(--ink); border-left: 6px solid var(--blue); box-shadow: 5px 5px 0 var(--ink); padding: 14px 16px; }
+.fx-w-info h3 { font-size: 24px; margin: 6px 0 4px; letter-spacing: -.5px; }
+.fx-w-info p { font-size: 11px; line-height: 1.6; margin: 4px 0; }
+.fx-w-info p:first-of-type { color: var(--muted); font-size: 9px; }
+.fx-w-info .fx-actions { margin-top: 10px; }
+.fx-world-btn { margin-left: 6px; }
+@media (max-width: 760px) {
+    .fx-w-top > span:first-child { display: none; }
+    .fx-w-mini { display: none; }
+    .fx-w-info { width: auto; right: 16px; }
+}
+
 /* ---------- terminal mode (secret) ---------- */
 html.fx-terminal body { background: #0d1117 !important; color: #9cdcfe !important; }
 html.fx-terminal body * { border-color: #30363d !important; }
