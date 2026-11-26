@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Historical Gaming Map — Revamp</title>
+  <meta name="description" content="An interactive archive of video game history, explored through the mechanics that define how we play.">
+  <link rel="icon" type="image/png" href="assets/img/controller.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ============ BOOT SCREEN ============ -->
+  <div id="boot" class="boot" role="dialog" aria-label="Start screen">
+    <div class="boot-inner">
+      <img src="assets/img/controller.png" alt="" class="boot-logo pixel">
+      <p class="boot-kicker">HISTORICAL GAMING MAP</p>
+      <h1 class="boot-title glitch" data-text="ARCHIVE OS">ARCHIVE OS</h1>
+      <div class="boot-log" id="bootLog" aria-live="polite"></div>
+      <div class="boot-bar"><span id="bootBar"></span></div>
+      <button class="btn btn-start" id="startBtn" type="button">PRESS START</button>
+      <p class="boot-hint">or press <kbd>Enter</kbd></p>
+    </div>
+  </div>
+
+  <canvas id="stars" aria-hidden="true"></canvas>
+  <div class="scanlines" aria-hidden="true"></div>
+  <div id="cursorGlow" aria-hidden="true"></div>
+
+  <!-- ============ HUD ============ -->
+  <header class="hud">
+    <a href="#top" class="hud-brand">
+      <img src="assets/img/controller.png" alt="" class="pixel">
+      <span>GAMING<b>MAP</b></span>
+    </a>
+    <nav class="hud-nav" aria-label="Sections">
+      <a href="#map">Map</a>
+      <a href="#archive">Archive</a>
+      <a href="#timeline">Timeline</a>
+      <a href="#compare">Versus</a>
+      <button type="button" class="link-btn" data-open-quiz>Quiz</button>
+    </nav>
+    <div class="hud-right">
+      <div class="xp" title="Experience points">
+        <span class="xp-lvl">LV <b id="lvl">1</b></span>
+        <div class="xp-bar"><span id="xpFill"></span></div>
+      </div>
+      <button class="icon-btn" id="searchBtn" type="button" aria-label="Search the archive (press /)">⌕</button>
+      <button class="icon-btn" id="trophyBtn" type="button" aria-label="Achievements">
+        <img src="assets/img/trophy.png" alt="" class="pixel"><span class="badge" id="trophyCount">0</span>
+      </button>
+      <button class="icon-btn" id="soundBtn" type="button" aria-pressed="false" aria-label="Toggle sound">🔇</button>
+    </div>
+  </header>
+
+  <main id="top">
+    <!-- ============ HERO ============ -->
+    <section class="hero">
+      <p class="kicker"><span class="dot"></span> MAP STATUS // ONLINE · 1952 — PRESENT</p>
+      <h1 class="hero-title">
+        <span class="line">EXPLORE</span>
+        <span class="line accent glitch" data-text="GAMING">GAMING</span>
+        <span class="line">THROUGH TIME<span class="caret">_</span></span>
+      </h1>
+      <p class="hero-sub" id="typeLine"></p>
+      <div class="hero-cta">
+        <a href="#map" class="btn btn-primary">ENTER THE MAP ↓</a>
+        <button type="button" class="btn btn-ghost" data-open-quiz>WHICH PATH ARE YOU?</button>
+      </div>
+      <ul class="hero-stats">
+        <li><b data-count="7">0</b><span>PATHS</span></li>
+        <li><b data-count="12">0</b><span>GENRES</span></li>
+        <li><b data-count="27">0</b><span>GAMES</span></li>
+        <li><b data-count="10">0</b><span>ACHIEVEMENTS</span></li>
+      </ul>
+      <div class="floaters" aria-hidden="true">
+        <img src="assets/img/coin.png" class="pixel f1" alt="">
+        <img src="assets/img/heart.png" class="pixel f2" alt="">
+        <img src="assets/img/trophy.png" class="pixel f3" alt="">
+        <img src="assets/img/coin.png" class="pixel f4" alt="">
+      </div>
+      <div class="parallax" aria-hidden="true">
+        <div class="layer far"></div><div class="layer mid"></div><div class="layer near"></div>
+      </div>
+    </section>
+
+    <!-- ============ INTERACTIVE MAP ============ -->
+    <section id="map" class="section">
+      <div class="section-head">
+        <p class="kicker">ARCHIVE // 001 — SELECT A MECHANIC</p>
+        <h2>Video games are defined by <em>what they let us do.</em></h2>
+        <p class="muted">Each node is a verb. Hover to scan it, click to open its genres and games.</p>
+      </div>
+      <div class="map-wrap" id="mapWrap">
+        <svg class="map-lines" id="mapLines" aria-hidden="true"></svg>
+        <div class="map-core" aria-hidden="true">
+          <div class="core-ring r1"></div><div class="core-ring r2"></div><div class="core-ring r3"></div>
+          <div class="core-label"><span>GAMING</span><span>HISTORY</span><small>7 PATHS</small></div>
+        </div>
+        <div id="mapNodes"></div>
+        <div class="map-tip" id="mapTip" role="status"></div>
+      </div>
+    </section>
+
+    <!-- ============ ARCHIVE GRID ============ -->
+    <section id="archive" class="section">
+      <div class="section-head">
+        <p class="kicker">ARCHIVE // 002 — GAME FILES</p>
+        <h2>Every file in the <em>archive.</em></h2>
+      </div>
+      <div class="filters" id="filters" role="toolbar" aria-label="Filter games by path"></div>
+      <div class="sort-row">
+        <label>SORT
+          <select id="sortSel">
+            <option value="year">Oldest first</option>
+            <option value="year-desc">Newest first</option>
+            <option value="title">A–Z</option>
+          </select>
+        </label>
+        <span class="muted" id="countLabel"></span>
+      </div>
+      <div class="cards" id="cards"></div>
+    </section>
+
+    <!-- ============ TIMELINE ============ -->
+    <section id="timeline" class="section">
+      <div class="section-head">
+        <p class="kicker">ARCHIVE // 003 — BEFORE THE INDUSTRY</p>
+        <h2>The pioneers who <em>pressed start.</em></h2>
+        <p class="muted">Drag or scroll sideways. Click a pioneer to open their file.</p>
+      </div>
+      <div class="timeline" id="timelineTrack" tabindex="0" aria-label="Timeline, scroll horizontally"></div>
+    </section>
+
+    <!-- ============ COMPARE ============ -->
+    <section id="compare" class="section">
+      <div class="section-head">
+        <p class="kicker">ARCHIVE // 004 — VERSUS MODE</p>
+        <h2>Pick two. <em>Fight!</em></h2>
+        <p class="muted">Compare the mechanic mix of any two games. Scores are archive estimates of each game's emphasis, not official ratings.</p>
+      </div>
+      <div class="versus">
+        <div class="vs-side p1"><span class="vs-tag">P1</span><select id="vsA" aria-label="Player 1 game"></select></div>
+        <div class="vs-mid"><span class="vs-word">VS</span></div>
+        <div class="vs-side p2"><span class="vs-tag">P2</span><select id="vsB" aria-label="Player 2 game"></select></div>
+      </div>
+      <div class="vs-body">
+        <svg id="radar" viewBox="-160 -160 320 320" role="img" aria-label="Radar chart comparing the two games"></svg>
+        <div class="vs-bars" id="vsBars"></div>
+      </div>
+      <p class="vs-verdict" id="vsVerdict"></p>
+    </section>
+
+    <!-- ============ CTA ============ -->
+    <section class="section final">
+      <img src="assets/img/trophy.png" alt="" class="pixel big-trophy">
+      <h2>Collect all <em>10 achievements.</em></h2>
+      <p class="muted">Open paths, read game files, use Versus mode, take the quiz… and maybe try a certain classic code.</p>
+      <button class="btn btn-primary" type="button" id="openTrophies">VIEW TROPHY ROOM</button>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="parallax small" aria-hidden="true"><div class="layer mid"></div><div class="layer near"></div></div>
+    <p>HISTORICAL GAMING MAP // REVAMP · Built for Web Development · All pixel art is original.</p>
+    <p class="muted">Game titles are trademarks of their respective owners. This is a non-commercial educational archive.</p>
+  </footer>
+
+  <!-- ============ MODAL ============ -->
+  <div class="modal" id="modal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle" tabindex="-1">
+      <button class="modal-close" type="button" data-close aria-label="Close">✕</button>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <!-- ============ SEARCH PALETTE ============ -->
+  <div class="palette" id="palette" hidden>
+    <div class="modal-backdrop" data-close-palette></div>
+    <div class="palette-card" role="dialog" aria-modal="true" aria-label="Search the archive">
+      <input id="paletteInput" type="search" placeholder="Search games, genres, developers, years…" autocomplete="off">
+      <ul id="paletteList" role="listbox"></ul>
+      <p class="palette-hint"><kbd>↑</kbd><kbd>↓</kbd> move · <kbd>Enter</kbd> open · <kbd>Esc</kbd> close</p>
+    </div>
+  </div>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+  <div id="fx" aria-hidden="true"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
