@@ -4,6 +4,7 @@ The [Historical Gaming Map](https://github.com/mikey101101/Gaming-Map) with an i
 
 - **Animated maps.** Connection lines draw in and nodes pop in. A crosshair with X/Y coordinates follows the mouse. Unvisited nodes pulse and visited ones get a ✓.
 - **Walk the Map.** Press ▶ WALK THE MAP, move the blue square with the arrow keys or WASD, collect the 10 data bits, and press Enter on a node to open it. Phones get an on-screen d-pad.
+- **14 new game pages**, built on the Minecraft page template: Tetris, Myst, Portal, Super Mario Bros., Sonic the Hedgehog, Celeste, SimCity, RollerCoaster Tycoon, Street Fighter II, Doom, Dark Souls, Pac-Man, Gran Turismo and Temple Run. Each has game data, overview, why it matters, history and timeline, gameplay, historical significance and its own accent colour. They're generated from `tools/entries.py` by `tools/make_pages.py`. The archive now holds 26 entries.
 - **Every path works.** Solve, Jump, Build, Fight, Run and Survive open popups with their genres and archive files.
 - **Path mini-games** inside the popups:
   - **Solve**: rotate circuit tiles to route the signal.
@@ -13,7 +14,7 @@ The [Historical Gaming Map](https://github.com/mikey101101/Gaming-Map) with an i
 - **World Map** (press M, or ⌖ WORLD in the HUD or next to WALK THE MAP). Every path, genre and game sits on one zoomable grid. Drag to pan, scroll or pinch to zoom, and use + / − / ⌂. More detail appears as you zoom in. Click a node to fly to it and get actions in the info panel. Games you've read turn blue, and a minimap and discovered count track your progress.
 - **Travel Through Time.** A history scrubber on the main page runs from 1952 to today. Drag it or press play, and events, eras and paths come online year by year. The main map dims any path that doesn't exist yet.
 - **3D archive models.** Each game page has a rotating cube in its header. Drag it to spin it.
-- **Play the mechanic.** Each game page has a mini-game for its genre:
+- **Play the mechanic.** Each game page has a mini-game for its path. Solve, Jump, Fight and Run pages use the same games as the path popups (click the game first so keys don't scroll the page). The others use:
   - **Build** (sandbox): place blocks on a grid. Your build is saved on that page.
   - **Explore** (open world / adventure): clear the fog and find 5 landmarks.
   - **Survive** (survival): gather, eat and keep a fire going. How many days can you last?

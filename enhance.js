@@ -30,8 +30,23 @@
         terraria:       { t: "Terraria", y: 2011, g: "Sandbox", game: "build", e: "003" },
         residentevil:   { t: "Resident Evil", y: 1996, g: "Survival", game: "survive", e: "001" },
         dontstarve:     { t: "Don't Starve", y: 2013, g: "Survival", game: "survive", e: "002" },
-        subnautica:     { t: "Subnautica", y: 2018, g: "Survival", game: "survive", e: "003" }
+        subnautica:     { t: "Subnautica", y: 2018, g: "Survival", game: "survive", e: "003" },
+        tetris:         { t: "Tetris", y: 1984, g: "Puzzle", game: "solve", e: "001" },
+        myst:           { t: "Myst", y: 1993, g: "Puzzle Adventure", game: "solve", e: "002" },
+        portal:         { t: "Portal", y: 2007, g: "Puzzle", game: "solve", e: "003" },
+        smb:            { t: "Super Mario Bros.", y: 1985, g: "Platformer", game: "jump", e: "001" },
+        sonic:          { t: "Sonic the Hedgehog", y: 1991, g: "Platformer", game: "jump", e: "002" },
+        celeste:        { t: "Celeste", y: 2018, g: "Platformer", game: "jump", e: "003" },
+        simcity:        { t: "SimCity", y: 1989, g: "City Builder", game: "build", e: "004" },
+        rct:            { t: "RollerCoaster Tycoon", y: 1999, g: "Management", game: "build", e: "005" },
+        sf2:            { t: "Street Fighter II", y: 1991, g: "Fighting", game: "fight", e: "001" },
+        doom:           { t: "Doom", y: 1993, g: "Shooter", game: "fight", e: "002" },
+        darksouls:      { t: "Dark Souls", y: 2011, g: "Action RPG", game: "fight", e: "003" },
+        pacman:         { t: "Pac-Man", y: 1980, g: "Maze Chase", game: "run", e: "001" },
+        granturismo:    { t: "Gran Turismo", y: 1997, g: "Racing", game: "run", e: "002" },
+        templerun:      { t: "Temple Run", y: 2011, g: "Endless Runner", game: "run", e: "003" }
     };
+    var TOTAL = Object.keys(PAGES).length;
     var GENRE_PAGES = {
         adventure: { t: "Adventure", game: "explore" }, openworld: { t: "Open World", game: "explore" },
         genre: { t: "Sandbox", game: "build" }, survival: { t: "Survival", game: "survive" }
@@ -61,15 +76,15 @@
         explore: { n: "01", name: "EXPLORE", sub: "DISCOVER WORLDS.", tag: "Discovery // Worlds // Navigation", page: "map.html",
             text: "Genres built around navigation, discovery and player-driven exploration." },
         solve:   { n: "02", name: "SOLVE", sub: "THINK TO PLAY.", tag: "Logic // Puzzles // Strategy",
-            text: "Games that turn reasoning into play, from falling blocks to portals that bend space.", files: ["tetris", "myst", "portal"] },
+            text: "Games that turn reasoning into play, from falling blocks to portals that bend space.", pages: ["tetris", "myst", "portal"] },
         jump:    { n: "03", name: "JUMP", sub: "MASTER THE ARC.", tag: "Movement // Timing // Platforms",
-            text: "Precision, rhythm and momentum: the platformer made the jump one of gaming's most expressive verbs.", files: ["smb", "sonic", "celeste"] },
+            text: "Precision, rhythm and momentum: the platformer made the jump one of gaming's most expressive verbs.", pages: ["smb", "sonic", "celeste"] },
         build:   { n: "04", name: "BUILD", sub: "SHAPE THE WORLD.", tag: "Creation // Systems // Sandbox", page: "genre.html",
-            text: "Games that hand players the tools, from block-by-block worlds to whole cities.", pages: ["minecraft", "terraria", "gta5"], files: ["simcity", "rct"] },
+            text: "Games that hand players the tools, from block-by-block worlds to whole cities.", pages: ["minecraft", "terraria", "gta5", "simcity", "rct"] },
         fight:   { n: "05", name: "FIGHT", sub: "READ YOUR RIVAL.", tag: "Combat // Action // Competition",
-            text: "Reflexes, mastery and rivalry: the fighter, the first-person shooter and the punishing action RPG.", files: ["sf2", "doom", "darksouls"] },
+            text: "Reflexes, mastery and rivalry: the fighter, the first-person shooter and the punishing action RPG.", pages: ["sf2", "doom", "darksouls"] },
         run:     { n: "06", name: "RUN", sub: "NEVER STOP.", tag: "Speed // Movement // Reaction",
-            text: "Games built on going fast: maze chases, racing lines and endless runs.", files: ["pacman", "granturismo", "templerun"] },
+            text: "Games built on going fast: maze chases, racing lines and endless runs.", pages: ["pacman", "granturismo", "templerun"] },
         survive: { n: "07", name: "SURVIVE", sub: "MAKE IT TO MORNING.", tag: "Resources // Risk // Endurance", page: "survival.html",
             text: "Scarcity creates tension: every item, every night and every decision matters.", pages: ["residentevil", "dontstarve", "subnautica"] }
     };
@@ -80,6 +95,9 @@
         minecraft: [8, 1, 10, 4, 4, 1], terraria: [8, 1, 8, 8, 2, 3], gta5: [9, 8, 1, 7, 1, 8], gta3: [8, 6, 0, 7, 1, 7],
         skyrim: [10, 7, 3, 7, 3, 2], breathofthewild: [10, 5, 3, 6, 7, 3], zelda: [9, 7, 1, 6, 8, 3], uncharted2: [6, 9, 0, 7, 4, 5],
         lifeisstrange: [5, 10, 0, 0, 5, 1], residentevil: [6, 6, 0, 5, 7, 1], dontstarve: [7, 2, 6, 4, 4, 1], subnautica: [10, 6, 7, 1, 3, 2],
+        tetris: [0, 0, 5, 0, 10, 8], myst: [8, 7, 0, 0, 10, 0], portal: [3, 6, 0, 0, 10, 4], celeste: [4, 7, 0, 0, 5, 8],
+        simcity: [1, 0, 10, 0, 6, 1], rct: [1, 0, 10, 0, 5, 2], sf2: [0, 1, 0, 10, 3, 7], doom: [5, 1, 0, 10, 2, 9],
+        darksouls: [8, 5, 1, 10, 3, 3], pacman: [2, 0, 0, 2, 5, 8], granturismo: [1, 0, 4, 0, 2, 10], templerun: [1, 0, 0, 0, 1, 10],
         rdr2: [9, 10, 1, 7, 1, 3], smb: [4, 1, 0, 3, 2, 7], sonic: [3, 1, 0, 2, 1, 10]
     };
     var MIX_AXES = ["EXPLORE", "STORY", "BUILD", "COMBAT", "PUZZLE", "SPEED"];
@@ -91,7 +109,7 @@
         allPaths: ["Cartographer", "Opened all 7 paths."],
         entry:    ["Archivist", "Read your first game entry."],
         entries5: ["Collector", "Read 5 game entries."],
-        entries12:["Completionist", "Read all 12 game entries."],
+        entries12:["Completionist", "Read every game entry in the archive."],
         walker:   ["Player One", "Walked the map with the keyboard."],
         bits:     ["Data Miner", "Collected every data bit on a map."],
         builder:  ["Architect", "Placed 50 blocks in Build mode."],
@@ -170,7 +188,7 @@
     }
     var hud = el("div", "fx-hud");
     hud.innerHTML =
-        '<div class="fx-hud-prog"><span class="fx-hud-label">ARCHIVE // </span><b id="fxLv">LV 1</b> · <span id="fxRead">00/12</span> ENTRIES<div class="fx-hud-bar"><i id="fxBar"></i></div></div>' +
+        '<div class="fx-hud-prog"><span class="fx-hud-label">ARCHIVE // </span><b id="fxLv">LV 1</b> · <span id="fxRead">00/26</span> ENTRIES<div class="fx-hud-bar"><i id="fxBar"></i></div></div>' +
         '<button type="button" id="fxSearchBtn" aria-label="Search the archive (press /)">/ SEARCH</button>' +
         '<button type="button" id="fxTrophyBtn" aria-label="Achievements">★ <span class="fx-count" id="fxAchCount">0</span></button>' +
         '<button type="button" id="fxWorldBtn" aria-label="Open the World Map (press M)">⌖ WORLD</button>' +
@@ -180,7 +198,7 @@
     function renderHud() {
         var read = S.pages.filter(function (p) { return PAGES[p]; }).length;
         $("#fxLv").textContent = "LV " + (Math.floor(S.xp / 100) + 1);
-        $("#fxRead").textContent = pad(read) + "/12";
+        $("#fxRead").textContent = pad(read) + "/" + TOTAL;
         $("#fxBar").style.width = (S.xp % 100) + "%";
         $("#fxAchCount").textContent = Object.keys(S.ach).length + "/" + Object.keys(ACH).length;
         var sb = $("#fxSoundBtn"); sb.textContent = S.sound ? "SND ON" : "SND OFF"; sb.setAttribute("aria-pressed", String(S.sound));
@@ -216,7 +234,7 @@
         unlock("online");
         if (readCount >= 1) unlock("entry");
         if (readCount >= 5) unlock("entries5");
-        if (readCount >= 12) unlock("entries12");
+        if (readCount >= TOTAL) unlock("entries12");
     }, 700);
     renderHud();
 
@@ -284,11 +302,11 @@
        SEARCH PALETTE ( / or Ctrl+K )
        --------------------------------------------------------- */
     var index = [];
-    Object.keys(PAGES).forEach(function (k) { index.push({ l: PAGES[k].t, s: PAGES[k].g.toUpperCase() + " // " + PAGES[k].y, h: k + ".html" }); });
+    Object.keys(PAGES).forEach(function (k) { index.push({ l: PAGES[k].t, s: PAGES[k].g.toUpperCase() + " // " + PAGES[k].y, h: k + ".html", x: FILES[k] ? FILES[k].dev : "" }); });
     Object.keys(GENRE_PAGES).forEach(function (k) { index.push({ l: GENRE_PAGES[k].t, s: "GENRE", h: k + ".html" }); });
     Object.keys(OTHER_PAGES).forEach(function (k) { index.push({ l: OTHER_PAGES[k], s: "PAGE", h: k + ".html" }); });
     Object.keys(PATHS).forEach(function (k) { index.push({ l: PATHS[k].name + " path", s: "PATH // " + PATHS[k].n, path: k }); });
-    Object.keys(FILES).forEach(function (k) { index.push({ l: FILES[k].t, s: FILES[k].g.toUpperCase() + " // " + FILES[k].y, file: k, x: FILES[k].dev }); });
+    Object.keys(FILES).forEach(function (k) { if (PAGES[k]) return; index.push({ l: FILES[k].t, s: FILES[k].g.toUpperCase() + " // " + FILES[k].y, file: k, x: FILES[k].dev }); });
     var srch = el("div", "fx-modal fx-search");
     srch.hidden = true;
     srch.innerHTML = '<div class="fx-modal-bg" data-fx-sclose></div><div class="fx-modal-card" role="dialog" aria-modal="true" aria-label="Search the archive"><input id="fxQ" type="search" placeholder="> search games, genres, years, developers…" autocomplete="off"><ul id="fxRes" role="listbox"></ul><p>↑ ↓ MOVE · ENTER OPEN · ESC CLOSE</p></div>';
@@ -543,7 +561,7 @@
         var hero = $(".game-hero-main") || $(".genre-header");
         var heroBox = $(".game-hero") || $(".genre-header");
         var color = heroBox ? getComputedStyle(heroBox).backgroundColor : "#0084ff";
-        var icon = { explore: "explore", build: "build", survive: "survive" }[info.game];
+        var icon = info.game;
         var wrap = el("div", "fx-model-wrap");
         wrap.title = "Drag to rotate";
         wrap.innerHTML = '<div class="fx-model" style="--c:' + color + '">' +
@@ -581,12 +599,14 @@
     var host = $(".game-wiki-page") || $(".genre-page");
     if (gameType && host) {
         var box = el("section", "fx-game");
-        var titles = { build: ["BUILD", "PLACE BLOCKS. MAKE SOMETHING."], explore: ["EXPLORE", "LIFT THE FOG. FIND THE LANDMARKS."], survive: ["SURVIVE", "LAST THE NIGHT."] };
+        var titles = { build: ["BUILD", "PLACE BLOCKS. MAKE SOMETHING."], explore: ["EXPLORE", "LIFT THE FOG. FIND THE LANDMARKS."], survive: ["SURVIVE", "LAST THE NIGHT."],
+            solve: ["SOLVE", "ROUTE THE SIGNAL."], jump: ["JUMP", "TIME EVERY LEAP."], fight: ["FIGHT", "READ YOUR RIVAL."], run: ["RUN", "NEVER STOP."] };
         box.innerHTML = '<div class="fx-game-top"><h2><span>//</span> PLAY THE MECHANIC: ' + titles[gameType][0] + '</h2><span>INTERACTIVE DEMO // ' + titles[gameType][1] + '</span></div><div class="fx-game-body"></div>';
         var anchor = $(".game-page-navigation", host) || $(".related-section", host);
         if (anchor) anchor.parentNode.insertBefore(box, anchor); else host.appendChild(box);
         var gb = $(".fx-game-body", box);
-        if (gameType === "build") buildGame(gb); else if (gameType === "explore") exploreGame(gb); else surviveGame(gb);
+        if (gameType === "build") buildGame(gb); else if (gameType === "explore") exploreGame(gb); else if (gameType === "survive") surviveGame(gb);
+        else setTimeout(function () { MINI[gameType](gb); }, 0); // MINI is defined further down
     }
 
     function buildGame(root) {
@@ -796,9 +816,14 @@
         if (v != null && v > (S.bests[key] || 0)) { S.bests[key] = v; save(); }
         return S.bests[key] || 0;
     }
-    function keyGuard(fn) {
+    function keyGuard(fn, root) {
         // only react while the popup is open and nothing is being typed
-        return function (e) { if (modal.hidden || !srch.hidden || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName || "")) return; fn(e); };
+        return function (e) {
+            if (!srch.hidden || worldOpen || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName || "")) return;
+            if (root && !modal.contains(root)) { if (!root.contains(document.activeElement)) return; } // on a page: only while the game is focused
+            else if (modal.hidden) return;
+            fn(e);
+        };
     }
     var MINI = {};
 
@@ -915,10 +940,11 @@
         var onKey = keyGuard(function (e) {
             var k = opts.keys[e.key]; if (!k) return;
             e.preventDefault(); press(k);
-        });
+        }, root);
         addEventListener("keydown", onKey);
-        cv.addEventListener("pointerdown", function (e) { var r = cv.getBoundingClientRect(); press(opts.tap ? opts.tap((e.clientY - r.top) / r.height) : "act"); });
-        ov.addEventListener("pointerdown", function () { press("act"); });
+        var wrapEl = $(".fx-arcade", root);
+        cv.addEventListener("pointerdown", function (e) { wrapEl.focus({ preventScroll: true }); var r = cv.getBoundingClientRect(); press(opts.tap ? opts.tap((e.clientY - r.top) / r.height) : "act"); });
+        ov.addEventListener("pointerdown", function () { wrapEl.focus({ preventScroll: true }); press("act"); });
         ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, 640, 220); opts.draw(ctx, opts.init());
         return function () { cancelAnimationFrame(raf); removeEventListener("keydown", onKey); };
     }
@@ -935,7 +961,7 @@
         return arcade(root, {
             key: "jump", ach: "jump", label: "Jump game",
             intro: "Your square runs on its own. Press SPACE, ↑ or tap to jump over black pillars and gaps in the line. Hold for a higher jump.",
-            start: "PRESS SPACE / TAP TO START", again: "PRESS SPACE / TAP TO RETRY",
+            start: "CLICK HERE, THEN PRESS SPACE / TAP TO START", again: "PRESS SPACE / TAP TO RETRY",
             keys: { " ": "act", ArrowUp: "act", w: "act", W: "act" },
             win: function (g) { return g.score >= 500; },
             init: function () { return { x: 0, y: GROUND, vy: 0, on: true, speed: 4.2, obs: [], score: 0, nextAt: 520, hold: 0 }; },
@@ -979,7 +1005,7 @@
         return arcade(root, {
             key: "run", ach: "run", label: "Run game",
             intro: "Three lanes, no brakes. Use ↑ / ↓ (or W / S, or tap the top or bottom half) to switch lanes. Dodge the walls and grab blue bits for bonus points. Last 30 seconds for an achievement.",
-            start: "PRESS ↑ / ↓ OR TAP TO START", again: "PRESS ↑ / ↓ OR TAP TO RETRY",
+            start: "CLICK HERE, THEN PRESS ↑ / ↓ OR TAP TO START", again: "PRESS ↑ / ↓ OR TAP TO RETRY",
             keys: { ArrowUp: "up", ArrowDown: "down", w: "up", s: "down", W: "up", S: "down", " ": "act" },
             tap: function (fy) { return fy < 0.5 ? "up" : "down"; },
             win: function (g) { return g.time >= 30; },
@@ -1051,7 +1077,7 @@
             render();
         }
         root.addEventListener("click", function (e) { var b = e.target.closest("[data-m]"); if (b) play(+b.dataset.m); if (e.target.id === "fxRematch") { reset(); sfx.open(); } });
-        var onKey = keyGuard(function (e) { var i = ["1", "2", "3"].indexOf(e.key); if (i >= 0) { e.preventDefault(); play(i); } });
+        var onKey = keyGuard(function (e) { var i = ["1", "2", "3"].indexOf(e.key); if (i >= 0) { e.preventDefault(); play(i); } }, root);
         addEventListener("keydown", onKey);
         reset();
         return function () { removeEventListener("keydown", onKey); };
@@ -1070,7 +1096,7 @@
             { y: 1972, t: "Pong / Atari", s: "NOLAN BUSHNELL", h: "figures.html" }
         ];
         Object.keys(PAGES).forEach(function (k) { EV.push({ y: PAGES[k].y, t: PAGES[k].t, s: PAGES[k].g.toUpperCase(), h: k + ".html" }); });
-        Object.keys(FILES).forEach(function (k) { EV.push({ y: FILES[k].y, t: FILES[k].t, s: FILES[k].g.toUpperCase(), file: k }); });
+        Object.keys(FILES).forEach(function (k) { if (PAGES[k]) return; EV.push({ y: FILES[k].y, t: FILES[k].t, s: FILES[k].g.toUpperCase(), file: k }); });
         EV.sort(function (a, b) { return a.y - b.y; });
         var MIN = 1952, MAX = 2018;
         var ts = el("section", "fx-scrub");
