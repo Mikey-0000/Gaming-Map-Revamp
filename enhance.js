@@ -99,7 +99,12 @@
         survivor: ["Still Breathing", "Survived 5 days in Survive mode."],
         versus:   ["Versus Mode", "Compared two games."],
         search:   ["Seeker", "Used archive search."],
-        konami:   ["Old School", "Entered the secret code."]
+        konami:   ["Old School", "Entered the secret code."],
+        solve:    ["Signal Restored", "Solved a circuit in Solve mode."],
+        jump:     ["Airborne", "Scored 500 in Jump mode."],
+        fight:    ["Champion", "Beat the Archive Sentinel in Fight mode."],
+        run:      ["Afterburner", "Lasted 30 seconds in Run mode."],
+        time:     ["Time Traveller", "Scrubbed through all of gaming history."]
     };
 
     /* ---------------------------------------------------------
@@ -221,7 +226,10 @@
     modal.innerHTML = '<div class="fx-modal-bg" data-fx-close></div><div class="fx-modal-card" role="dialog" aria-modal="true" tabindex="-1"><div class="fx-modal-top"><span id="fxModalCrumb">ARCHIVE</span><button class="fx-close" type="button" data-fx-close>CLOSE [ESC]</button></div><div id="fxModalBody"></div></div>';
     document.body.appendChild(modal);
     var mCard = $(".fx-modal-card", modal), mBody = $("#fxModalBody"), lastFocus = null;
+    var stopMini = null;
+    function endMini() { if (stopMini) { stopMini(); stopMini = null; } }
     function openModal(crumb, html) {
+        endMini();
         if (modal.hidden) lastFocus = document.activeElement;
         $("#fxModalCrumb").textContent = crumb; mBody.innerHTML = html;
         modal.hidden = false; mCard.scrollTop = 0;
@@ -229,7 +237,7 @@
         mCard.focus(); sfx.open();
         setTimeout(function () { $$(".fx-bar i[data-w]", mBody).forEach(function (b) { b.style.width = b.dataset.w + "%"; }); }, 60);
     }
-    function closeModal() { if (modal.hidden) return; modal.hidden = true; if (lastFocus && lastFocus.focus) lastFocus.focus(); }
+    function closeModal() { if (modal.hidden) return; endMini(); modal.hidden = true; if (lastFocus && lastFocus.focus) lastFocus.focus(); }
     modal.addEventListener("click", function (e) {
         if (e.target.closest("[data-fx-close]")) { closeModal(); return; }
         var f = e.target.closest("[data-fx-file]"); if (f) { openFile(f.dataset.fxFile, f.dataset.fxFrom); return; }
@@ -255,7 +263,8 @@
         var actions = p.page ? '<div class="fx-actions"><a class="fx-btn blue" href="' + p.page + '">ENTER FULL PATH →</a></div>' : "";
         openModal("PATH // " + p.n + " // " + p.name,
             '<div class="fx-modal-head"><div><span class="fx-label">SELECTED PATH // ' + p.n + "</span><h2>" + p.name + "<br><span>" + p.sub + "</span></h2><p>" + p.text + '</p></div><img class="px" src="assets/img/' + id + '.png" alt=""></div>' +
-            '<div class="fx-modal-body">' + body + actions + "</div>");
+            '<div class="fx-modal-body">' + (MINI[id] ? '<p class="fx-sub">// PLAY THE MECHANIC: ' + p.name + '</p><div class="fx-mini" id="fxMini"></div>' : "") + body + actions + "</div>");
+        if (MINI[id]) stopMini = MINI[id]($("#fxMini"));
         var node = $(".node-" + id); if (node) node.classList.remove("fx-unvisited"), node.classList.add("fx-visited");
     }
     function openFile(k, from) {
@@ -773,6 +782,340 @@
         A.addEventListener("change", function () { renderVs(true); });
         B.addEventListener("change", function () { renderVs(true); });
         renderVs(false);
+    }
+
+    /* ---------------------------------------------------------
+       PATH MINI-GAMES (inside the path popups on the main map)
+       Each takes a container and returns a stop() function.
+       --------------------------------------------------------- */
+    function best(key, v) {
+        S.bests = S.bests || {};
+        if (v != null && v > (S.bests[key] || 0)) { S.bests[key] = v; save(); }
+        return S.bests[key] || 0;
+    }
+    function keyGuard(fn) {
+        // only react while the popup is open and nothing is being typed
+        return function (e) { if (modal.hidden || !srch.hidden || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName || "")) return; fn(e); };
+    }
+    var MINI = {};
+
+    /* SOLVE: rotate circuit tiles to route the signal across */
+    MINI.solve = function (root) {
+        var N = 6, tiles, sr, tr, moves, solved;
+        var SHAPES = { I: [0, 2], L: [0, 1], T: [0, 1, 3] };
+        root.innerHTML = '<p class="fx-mini-intro">Click tiles to rotate them. Route the blue signal from the left port to the right port.</p>' +
+            '<div class="fx-stats"><div>MOVES<b id="fxMv">0</b></div><div>STATUS<b id="fxSt">OFFLINE</b></div><div>BEST (FEWEST)<b id="fxSb">—</b></div></div>' +
+            '<div class="fx-pipes-wrap"><span class="fx-port in" id="fxIn">IN</span><div class="fx-pipes" id="fxPipes" role="grid" aria-label="Circuit puzzle"></div><span class="fx-port out" id="fxOut">OUT</span></div>' +
+            '<div class="fx-tools"><button type="button" class="fx-btn blue" id="fxNewCircuit">NEW CIRCUIT</button></div>';
+        var grid = $("#fxPipes", root);
+        function open(t) { return SHAPES[t.s].map(function (d) { return (d + t.r) % 4; }); }
+        function gen() {
+            sr = (Math.random() * N) | 0; tr = (Math.random() * N) | 0;
+            // random self-avoiding walk from the left column to the right column
+            var path;
+            for (var tries = 0; tries < 200 && !path; tries++) {
+                var p = [[0, sr]], seen = {}; seen[0 + "," + sr] = 1;
+                while (p.length < 60) {
+                    var c = p[p.length - 1];
+                    if (c[0] === N - 1 && c[1] === tr) { path = p; break; }
+                    var opts = [[1, 0], [0, 1], [0, -1], [1, 0], [-1, 0]].map(function (d) { return [c[0] + d[0], c[1] + d[1]]; })
+                        .filter(function (n) { return n[0] >= 0 && n[1] >= 0 && n[0] < N && n[1] < N && !seen[n[0] + "," + n[1]]; });
+                    if (!opts.length) break;
+                    var nx = opts[(Math.random() * opts.length) | 0]; seen[nx[0] + "," + nx[1]] = 1; p.push(nx);
+                }
+            }
+            if (!path) { // fallback: straight across, then down/up to the exit row
+                path = []; for (var fx = 0; fx < N; fx++) path.push([fx, sr]);
+                for (var fy = sr; fy !== tr;) { fy += tr > sr ? 1 : -1; path.push([N - 1, fy]); }
+            }
+            tiles = [];
+            for (var i = 0; i < N * N; i++) tiles.push({ s: ["I", "L", "T"][(Math.random() * 3) | 0], r: 0 });
+            path.forEach(function (c, i) {
+                var dirs = [];
+                var prev = i === 0 ? [c[0] - 1, c[1]] : path[i - 1], next = i === path.length - 1 ? [c[0] + 1, c[1]] : path[i + 1];
+                [prev, next].forEach(function (o) { var dx = o[0] - c[0], dy = o[1] - c[1]; dirs.push(dy === -1 ? 0 : dx === 1 ? 1 : dy === 1 ? 2 : 3); });
+                tiles[c[1] * N + c[0]] = { s: (dirs[0] + 2) % 4 === dirs[1] ? "I" : "L", r: 0 };
+            });
+            tiles.forEach(function (t) { t.r = (Math.random() * 4) | 0; });
+            moves = 0; solved = false;
+            $("#fxIn", root).style.top = (sr + 0.5) / N * 100 + "%"; $("#fxOut", root).style.top = (tr + 0.5) / N * 100 + "%";
+            render();
+        }
+        function lit() {
+            var on = {}, q = [];
+            if (open(tiles[sr * N]).indexOf(3) >= 0) { on[sr * N] = 1; q.push([0, sr]); }
+            while (q.length) {
+                var c = q.shift();
+                open(tiles[c[1] * N + c[0]]).forEach(function (d) {
+                    var n = [c[0] + [0, 1, 0, -1][d], c[1] + [-1, 0, 1, 0][d]];
+                    if (n[0] < 0 || n[1] < 0 || n[0] >= N || n[1] >= N) return;
+                    var k = n[1] * N + n[0];
+                    if (!on[k] && open(tiles[k]).indexOf((d + 2) % 4) >= 0) { on[k] = 1; q.push(n); }
+                });
+            }
+            return on;
+        }
+        function svg(t, on) {
+            var c = on ? "#0084ff" : "#222222", w = on ? 7 : 5;
+            var ends = { 0: "25,0", 1: "50,25", 2: "25,50", 3: "0,25" };
+            return '<svg viewBox="0 0 50 50" aria-hidden="true">' + open(t).map(function (d) { return '<polyline points="25,25 ' + ends[d] + '" stroke="' + c + '" stroke-width="' + w + '" stroke-linecap="square"/>'; }).join("") +
+                '<rect x="20" y="20" width="10" height="10" fill="' + (on ? "#0084ff" : "#ffffff") + '" stroke="' + c + '" stroke-width="2"/></svg>';
+        }
+        function render() {
+            var on = lit(), end = tr * N + N - 1;
+            solved = !!on[end] && open(tiles[end]).indexOf(1) >= 0;
+            grid.innerHTML = tiles.map(function (t, i) { return '<button type="button" class="fx-pipe' + (on[i] ? " on" : "") + '" data-i="' + i + '" aria-label="Tile ' + (i % N + 1) + "," + ((i / N | 0) + 1) + '">' + svg(t, on[i]) + "</button>"; }).join("");
+            $("#fxMv", root).textContent = moves;
+            $("#fxSt", root).textContent = solved ? "ONLINE ✓" : "OFFLINE";
+            $("#fxOut", root).classList.toggle("on", solved);
+            var b = S.bests && S.bests.solveFew; $("#fxSb", root).textContent = b ? b : "—";
+            if (solved) {
+                grid.classList.add("solved"); sfx.win(); unlock("solve");
+                if (!b || moves < b) { S.bests = S.bests || {}; S.bests.solveFew = moves; save(); $("#fxSb", root).textContent = moves; }
+                var c = center(grid); sparks(c[0], c[1], 24);
+            } else grid.classList.remove("solved");
+        }
+        grid.addEventListener("click", function (e) {
+            var b = e.target.closest("[data-i]"); if (!b || solved) return;
+            tiles[+b.dataset.i].r = (tiles[+b.dataset.i].r + 1) % 4; moves++; sfx.tick(); render();
+            var nb = grid.querySelector('[data-i="' + b.dataset.i + '"]'); if (nb) nb.focus();
+        });
+        $("#fxNewCircuit", root).addEventListener("click", function () { gen(); sfx.open(); });
+        gen();
+        return function () {};
+    };
+
+    /* shared canvas loop helper for the action games */
+    function arcade(root, opts) {
+        root.innerHTML = '<p class="fx-mini-intro">' + opts.intro + '</p>' +
+            '<div class="fx-stats"><div>SCORE<b class="fx-sc">0</b></div><div>BEST<b class="fx-bs">' + best(opts.key) + '</b></div><div>STATUS<b class="fx-ss">READY</b></div></div>' +
+            '<div class="fx-canvas-wrap fx-arcade" tabindex="0"><canvas width="640" height="220" aria-label="' + opts.label + '"></canvas><div class="fx-overlay">' + opts.start + "</div></div>";
+        var cv = $("canvas", root), ctx = cv.getContext("2d"), ov = $(".fx-overlay", root), raf = 0, state = "ready", g = {};
+        function setStatus(t) { $(".fx-ss", root).textContent = t; }
+        function begin() { g = opts.init(); state = "play"; ov.style.display = "none"; setStatus("PLAYING"); sfx.open(); last = performance.now(); loop(last); }
+        function over() {
+            state = "over"; cancelAnimationFrame(raf); sfx.bad();
+            var sc = Math.floor(g.score), b = best(opts.key, sc);
+            $(".fx-bs", root).textContent = b; setStatus("GAME OVER");
+            ov.innerHTML = "GAME OVER // SCORE " + sc + "<br><small>" + opts.again + "</small>"; ov.style.display = "flex";
+            if (opts.win && opts.win(g)) unlock(opts.ach);
+        }
+        var last = 0;
+        function loop(t) {
+            var dt = Math.min(2.5, (t - last) / 16.67); last = t;
+            if (opts.step(g, dt) === false) { opts.draw(ctx, g); over(); return; }
+            opts.draw(ctx, g);
+            $(".fx-sc", root).textContent = Math.floor(g.score);
+            raf = requestAnimationFrame(loop);
+        }
+        function press(kind) { if (state !== "play") { begin(); return; } opts.input(g, kind); }
+        var onKey = keyGuard(function (e) {
+            var k = opts.keys[e.key]; if (!k) return;
+            e.preventDefault(); press(k);
+        });
+        addEventListener("keydown", onKey);
+        cv.addEventListener("pointerdown", function (e) { var r = cv.getBoundingClientRect(); press(opts.tap ? opts.tap((e.clientY - r.top) / r.height) : "act"); });
+        ov.addEventListener("pointerdown", function () { press("act"); });
+        ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, 640, 220); opts.draw(ctx, opts.init());
+        return function () { cancelAnimationFrame(raf); removeEventListener("keydown", onKey); };
+    }
+    function gridBg(ctx, off) {
+        ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, 640, 220);
+        ctx.strokeStyle = "#eeeeee"; ctx.lineWidth = 1;
+        for (var x = -((off || 0) % 25); x < 640; x += 25) { ctx.beginPath(); ctx.moveTo(x + .5, 0); ctx.lineTo(x + .5, 220); ctx.stroke(); }
+        for (var y = 0; y < 220; y += 25) { ctx.beginPath(); ctx.moveTo(0, y + .5); ctx.lineTo(640, y + .5); ctx.stroke(); }
+    }
+
+    /* JUMP: time your jumps over pillars and gaps */
+    MINI.jump = function (root) {
+        var GROUND = 170;
+        return arcade(root, {
+            key: "jump", ach: "jump", label: "Jump game",
+            intro: "Your square runs on its own. Press SPACE, ↑ or tap to jump over black pillars and gaps in the line. Hold for a higher jump.",
+            start: "PRESS SPACE / TAP TO START", again: "PRESS SPACE / TAP TO RETRY",
+            keys: { " ": "act", ArrowUp: "act", w: "act", W: "act" },
+            win: function (g) { return g.score >= 500; },
+            init: function () { return { x: 0, y: GROUND, vy: 0, on: true, speed: 4.2, obs: [], score: 0, nextAt: 520, hold: 0 }; },
+            input: function (g) { if (g.on) { g.vy = -9.6; g.on = false; g.hold = 10; sfx.step(); } },
+            step: function (g, dt) {
+                g.x += g.speed * dt; g.speed = Math.min(9, g.speed + 0.0016 * dt); g.score = g.x / 10;
+                if (g.hold > 0) { g.hold -= dt; g.vy -= 0.25 * dt; }
+                g.vy += 0.62 * dt; g.y += g.vy * dt;
+                var px = g.x + 80;
+                var overGap = g.obs.some(function (o) { return o.t === "gap" && px + 12 > o.x + 4 && px + 2 < o.x + o.w - 4; });
+                if (g.y >= GROUND && !overGap) { g.y = GROUND; g.vy = 0; g.on = true; }
+                if (g.y > 230) return false;
+                if (g.x + 640 > g.nextAt) {
+                    var t = Math.random() < 0.55 ? "pillar" : "gap";
+                    g.obs.push(t === "pillar" ? { t: t, x: g.nextAt, w: 18 + Math.random() * 10, h: 22 + Math.random() * 34 } : { t: t, x: g.nextAt, w: 44 + Math.random() * 36 });
+                    g.nextAt += 210 + Math.random() * 190 + g.speed * 10;
+                }
+                g.obs = g.obs.filter(function (o) { return o.x + o.w > g.x - 50; });
+                for (var i = 0; i < g.obs.length; i++) {
+                    var o = g.obs[i];
+                    if (o.t === "pillar" && px + 14 > o.x && px < o.x + o.w && g.y > GROUND - o.h) return false;
+                }
+            },
+            draw: function (ctx, g) {
+                gridBg(ctx, g.x);
+                ctx.fillStyle = "#222222";
+                var gaps = g.obs.filter(function (o) { return o.t === "gap"; }).sort(function (a, b) { return a.x - b.x; }), sx = 0;
+                gaps.forEach(function (o) { var gx = o.x - g.x; if (gx > sx) ctx.fillRect(sx, GROUND + 14, gx - sx, 3); sx = Math.max(sx, gx + o.w); });
+                if (sx < 640) ctx.fillRect(sx, GROUND + 14, 640 - sx, 3);
+                g.obs.forEach(function (o) { if (o.t === "pillar") { ctx.fillStyle = "#222222"; ctx.fillRect(o.x - g.x, GROUND + 14 - o.h, o.w, o.h); } });
+                ctx.fillStyle = "#0084ff"; ctx.fillRect(80, g.y, 14, 14);
+                ctx.fillStyle = "rgba(0,132,255,.15)"; ctx.fillRect(76, g.y - 4, 22, 22);
+                ctx.fillStyle = "#777777"; ctx.font = "10px Consolas, monospace"; ctx.fillText("DIST // " + Math.floor(g.score), 10, 18);
+            }
+        });
+    };
+
+    /* RUN: switch lanes to dodge walls, grab data bits */
+    MINI.run = function (root) {
+        var LANES = [45, 110, 175];
+        return arcade(root, {
+            key: "run", ach: "run", label: "Run game",
+            intro: "Three lanes, no brakes. Use ↑ / ↓ (or W / S, or tap the top or bottom half) to switch lanes. Dodge the walls and grab blue bits for bonus points. Last 30 seconds for an achievement.",
+            start: "PRESS ↑ / ↓ OR TAP TO START", again: "PRESS ↑ / ↓ OR TAP TO RETRY",
+            keys: { ArrowUp: "up", ArrowDown: "down", w: "up", s: "down", W: "up", S: "down", " ": "act" },
+            tap: function (fy) { return fy < 0.5 ? "up" : "down"; },
+            win: function (g) { return g.time >= 30; },
+            init: function () { return { lane: 1, y: LANES[1], speed: 5, walls: [], bits: [], score: 0, time: 0, next: 60, off: 0 }; },
+            input: function (g, k) { if (k === "up" && g.lane > 0) g.lane--; if (k === "down" && g.lane < 2) g.lane++; sfx.step(); },
+            step: function (g, dt) {
+                g.time += dt / 60; g.off += g.speed * dt; g.speed = Math.min(12, 5 + g.time * 0.18);
+                g.score = g.time * 10 + (g.bonus || 0);
+                g.y += (LANES[g.lane] - g.y) * Math.min(1, 0.35 * dt);
+                g.next -= g.speed * dt;
+                if (g.next <= 0) {
+                    var free = (Math.random() * 3) | 0, lanes = [0, 1, 2].filter(function (l) { return l !== free && Math.random() < 0.75; });
+                    if (!lanes.length) lanes = [(free + 1) % 3];
+                    lanes.forEach(function (l) { g.walls.push({ x: 660, l: l }); });
+                    if (Math.random() < 0.6) g.bits.push({ x: 700, l: free });
+                    g.next = 170 + Math.random() * 120;
+                }
+                g.walls.forEach(function (w) { w.x -= g.speed * dt; });
+                g.bits.forEach(function (b) { b.x -= g.speed * dt; });
+                g.walls = g.walls.filter(function (w) { return w.x > -30; });
+                var hit = g.walls.some(function (w) { return w.x < 102 && w.x + 22 > 80 && Math.abs(LANES[w.l] - g.y) < 20; });
+                if (hit) return false;
+                g.bits = g.bits.filter(function (b) {
+                    if (b.x < 100 && b.x > 70 && Math.abs(LANES[b.l] - g.y) < 20) { g.bonus = (g.bonus || 0) + 25; sfx.bit(); return false; }
+                    return b.x > -20;
+                });
+            },
+            draw: function (ctx, g) {
+                gridBg(ctx, g.off);
+                ctx.strokeStyle = "#bdbdbd"; ctx.setLineDash([8, 8]);
+                [77, 142].forEach(function (y) { ctx.beginPath(); ctx.moveTo(0, y + .5); ctx.lineTo(640, y + .5); ctx.stroke(); });
+                ctx.setLineDash([]);
+                ctx.fillStyle = "#222222"; g.walls.forEach(function (w) { ctx.fillRect(w.x, LANES[w.l] - 22, 22, 44); });
+                g.bits.forEach(function (b) { ctx.save(); ctx.translate(b.x, LANES[b.l]); ctx.rotate(Math.PI / 4); ctx.strokeStyle = "#0084ff"; ctx.lineWidth = 2; ctx.strokeRect(-5, -5, 10, 10); ctx.restore(); });
+                ctx.fillStyle = "rgba(0,132,255,.18)"; for (var i = 1; i < 5; i++) ctx.fillRect(84 - i * 10, g.y - 6, 6, 12);
+                ctx.fillStyle = "#0084ff"; ctx.fillRect(84, g.y - 8, 16, 16);
+                ctx.fillStyle = "#777777"; ctx.font = "10px Consolas, monospace"; ctx.fillText("TIME // " + g.time.toFixed(1) + "s", 10, 16);
+            }
+        });
+    };
+
+    /* FIGHT: read the Archive Sentinel (strike > feint > guard > strike) */
+    MINI.fight = function (root) {
+        var MOVES = ["STRIKE", "GUARD", "FEINT"], BEATS = { 0: 2, 1: 0, 2: 1 }; // strike beats feint, guard beats strike, feint beats guard
+        root.innerHTML = '<p class="fx-mini-intro">A duel of reads. <b>STRIKE</b> beats FEINT, <b>GUARD</b> beats STRIKE, <b>FEINT</b> beats GUARD. The Sentinel learns your habits, so mix it up. Keys 1 / 2 / 3.</p>' +
+            '<div class="fx-arena"><div class="fx-fighter p"><span class="fx-tag">P1 // YOU</span><div class="fx-hp" id="fxHpP"></div><div class="fx-body blue"></div><b id="fxMvP">—</b></div>' +
+            '<div class="fx-vs">VS</div>' +
+            '<div class="fx-fighter e"><span class="fx-tag">ARCHIVE SENTINEL</span><div class="fx-hp" id="fxHpE"></div><div class="fx-body"></div><b id="fxMvE">—</b></div></div>' +
+            '<div class="fx-tools fx-moves"><button type="button" class="fx-btn" data-m="0">[1] STRIKE</button><button type="button" class="fx-btn" data-m="1">[2] GUARD</button><button type="button" class="fx-btn" data-m="2">[3] FEINT</button><button type="button" class="fx-btn blue" id="fxRematch">REMATCH</button></div>' +
+            '<div class="fx-log" id="fxFLog" aria-live="polite"></div>';
+        var hp, ehp, hist, done, wins = best("fightWins");
+        function hearts(n) { var h = ""; for (var i = 0; i < 5; i++) h += '<img class="px" src="assets/img/heart.png" alt="" style="opacity:' + (i < n ? 1 : 0.15) + '">'; return h; }
+        function log(m) { var lg = $("#fxFLog", root); lg.insertBefore(el("p", "", m), lg.firstChild); }
+        function render() { $("#fxHpP", root).innerHTML = hearts(hp); $("#fxHpE", root).innerHTML = hearts(ehp); $$("[data-m]", root).forEach(function (b) { b.disabled = done; }); }
+        function reset() { hp = 5; ehp = 5; hist = [0, 0, 0]; done = false; $("#fxFLog", root).innerHTML = ""; log("ROUND 1 // The Sentinel waits. Wins so far: " + wins + "."); $("#fxMvP", root).textContent = "—"; $("#fxMvE", root).textContent = "—"; render(); }
+        function shake(sel) { var b = $(sel + " .fx-body", root); b.classList.remove("hit"); void b.offsetWidth; b.classList.add("hit"); }
+        function play(m) {
+            if (done) return;
+            // Sentinel predicts your most-used move and counters it 60% of the time
+            var fav = hist.indexOf(Math.max.apply(null, hist)), counter = +Object.keys(BEATS).filter(function (k) { return BEATS[k] === fav; })[0];
+            var e = hist[0] + hist[1] + hist[2] > 1 && Math.random() < 0.6 ? counter : (Math.random() * 3) | 0;
+            hist[m]++;
+            $("#fxMvP", root).textContent = MOVES[m]; $("#fxMvE", root).textContent = MOVES[e];
+            if (m === e) { log(MOVES[m] + " vs " + MOVES[e] + " // Clash. No damage."); sfx.tick(); }
+            else if (BEATS[m] === e) { ehp--; log(MOVES[m] + " beats " + MOVES[e] + " // You land a hit."); sfx.bit(); shake(".e"); }
+            else { hp--; log(MOVES[e] + " beats " + MOVES[m] + " // The Sentinel read you."); sfx.bad(); shake(".p"); }
+            if (ehp <= 0) { done = true; wins = best("fightWins", wins + 1); log("K.O. // You win! Total wins: " + wins + "."); unlock("fight"); sfx.win(); var c = center($(".fx-fighter.e", root)); sparks(c[0], c[1], 30); }
+            else if (hp <= 0) { done = true; log("DEFEAT // The Sentinel stands. Press REMATCH."); }
+            render();
+        }
+        root.addEventListener("click", function (e) { var b = e.target.closest("[data-m]"); if (b) play(+b.dataset.m); if (e.target.id === "fxRematch") { reset(); sfx.open(); } });
+        var onKey = keyGuard(function (e) { var i = ["1", "2", "3"].indexOf(e.key); if (i >= 0) { e.preventDefault(); play(i); } });
+        addEventListener("keydown", onKey);
+        reset();
+        return function () { removeEventListener("keydown", onKey); };
+    };
+
+    /* ---------------------------------------------------------
+       HISTORY SCRUBBER (main page): drag through 1952 → today
+       --------------------------------------------------------- */
+    var archiveSec = $(".featured-archive");
+    if (archiveSec) {
+        var FIRST = { run: 1980, solve: 1984, jump: 1985, build: 1989, fight: 1991, survive: 1996, explore: 1998 };
+        var ERAS = [[1952, "LAB EXPERIMENTS"], [1970, "THE ARCADE AGE"], [1983, "HOME CONSOLES"], [1993, "THE 3D LEAP"], [2001, "OPEN WORLDS"], [2008, "INDIE + SANDBOX"]];
+        var EV = [
+            { y: 1952, t: "OXO", s: "A. S. DOUGLAS", h: "figures.html" }, { y: 1958, t: "Tennis for Two", s: "W. HIGINBOTHAM", h: "figures.html" },
+            { y: 1962, t: "Spacewar!", s: "STEVE RUSSELL", h: "figures.html" }, { y: 1972, t: "Magnavox Odyssey", s: "RALPH BAER", h: "figures.html" },
+            { y: 1972, t: "Pong / Atari", s: "NOLAN BUSHNELL", h: "figures.html" }
+        ];
+        Object.keys(PAGES).forEach(function (k) { EV.push({ y: PAGES[k].y, t: PAGES[k].t, s: PAGES[k].g.toUpperCase(), h: k + ".html" }); });
+        Object.keys(FILES).forEach(function (k) { EV.push({ y: FILES[k].y, t: FILES[k].t, s: FILES[k].g.toUpperCase(), file: k }); });
+        EV.sort(function (a, b) { return a.y - b.y; });
+        var MIN = 1952, MAX = 2018;
+        var ts = el("section", "fx-scrub");
+        ts.innerHTML = '<div class="home-section-label"><span>// TRAVEL THROUGH TIME</span><span>004</span></div>' +
+            '<div class="fx-scrub-head"><div><span class="fx-label">YEAR // ERA</span><div class="fx-year" id="fxYear">' + MAX + '</div><div class="fx-era" id="fxEra"></div></div>' +
+            '<div class="fx-scrub-side"><p>Drag the slider or press play to watch the archive fill up. Paths come online when their first archived game arrives, and the main map above follows along.</p><div class="fx-paths" id="fxPaths"></div></div></div>' +
+            '<div class="fx-track" id="fxTrack"></div>' +
+            '<div class="fx-slider"><button type="button" class="fx-btn blue" id="fxPlayYears">▶ PLAY HISTORY</button><input type="range" id="fxRange" min="' + MIN + '" max="' + MAX + '" value="' + MAX + '" aria-label="Year"><span id="fxCount"></span></div>' +
+            '<p class="fx-sub">// ARRIVED MOST RECENTLY</p><div class="fx-entries" id="fxRecent"></div>';
+        archiveSec.parentNode.insertBefore(ts, archiveSec.nextSibling);
+        var track = $("#fxTrack"), range = $("#fxRange"), seenMin = MAX, seenMax = MAX;
+        var pos = function (y) { return (y - MIN) / (MAX - MIN) * 100; };
+        var stacks = {};
+        track.innerHTML = '<div class="fx-track-line"></div>' + [1960, 1970, 1980, 1990, 2000, 2010].map(function (d) { return '<span class="fx-tick" style="left:' + pos(d) + '%">' + d + "</span>"; }).join("") +
+            EV.map(function (e, i) { var n = stacks[e.y] = (stacks[e.y] || 0) + 1; return '<button type="button" class="fx-ev" data-ev="' + i + '" style="left:' + pos(e.y) + "%;bottom:" + (22 + (n - 1) * 15) + 'px" title="' + e.y + " // " + e.t + '" aria-label="' + e.y + ", " + e.t + '"></button>'; }).join("");
+        $("#fxPaths").innerHTML = Object.keys(PATHS).map(function (k) { return '<span class="fx-pchip" data-p="' + k + '"><img class="px" src="assets/img/' + k + '.png" alt="">' + PATHS[k].name + "<small>" + FIRST[k] + "</small></span>"; }).join("");
+        function openEv(e) { if (e.h) navigate(e.h); else openFile(e.file); }
+        function setYear(y, quiet) {
+            y = +y; $("#fxYear").textContent = y === MAX ? y + "+" : y;
+            var era = ERAS.filter(function (e) { return e[0] <= y; }).pop(); $("#fxEra").textContent = era ? era[1] : "";
+            var live = EV.filter(function (e) { return e.y <= y; });
+            $$(".fx-ev", track).forEach(function (b) { b.classList.toggle("on", EV[+b.dataset.ev].y <= y); });
+            $("#fxCount").textContent = pad(live.length) + "/" + EV.length + " IN THE ARCHIVE";
+            $$(".fx-pchip").forEach(function (c) { c.classList.toggle("on", FIRST[c.dataset.p] <= y); });
+            $$(".mechanic-node").forEach(function (n) {
+                var id = (n.className.match(/node-(\w+)/) || [])[1];
+                n.classList.toggle("fx-future", FIRST[id] > y);
+            });
+            $("#fxRecent").innerHTML = live.slice(-4).reverse().map(function (e, i) {
+                return '<button type="button" class="fx-entry" data-ev="' + EV.indexOf(e) + '" style="animation-delay:' + i * 0.04 + 's"><small><span>' + e.s + "</span><span>" + e.y + "</span></small><b>" + e.t + "</b><em>OPEN →</em></button>";
+            }).join("") || '<p class="muted">Nothing yet. Keep going.</p>';
+            if (!quiet) { seenMin = Math.min(seenMin, y); seenMax = Math.max(seenMax, y); if (seenMin <= 1960 && seenMax >= MAX && y === MAX) unlock("time"); }
+        }
+        range.addEventListener("input", function () { setYear(range.value); sfx.tick(); });
+        ts.addEventListener("click", function (e) { var b = e.target.closest("[data-ev]"); if (b) openEv(EV[+b.dataset.ev]); });
+        var playing = 0;
+        $("#fxPlayYears").addEventListener("click", function () {
+            var btn = this;
+            if (playing) { clearInterval(playing); playing = 0; btn.textContent = "▶ PLAY HISTORY"; return; }
+            var y = +range.value >= MAX ? MIN : +range.value;
+            btn.textContent = "■ PAUSE";
+            playing = setInterval(function () {
+                range.value = y; setYear(y);
+                if (EV.some(function (e) { return e.y === y; })) sfx.tick();
+                if (++y > MAX) { clearInterval(playing); playing = 0; btn.textContent = "▶ PLAY HISTORY"; }
+            }, reduced ? 20 : 140);
+        });
+        setYear(MAX, true);
     }
 
     /* ---------------------------------------------------------
