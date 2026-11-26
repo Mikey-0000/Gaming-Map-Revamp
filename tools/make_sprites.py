@@ -247,47 +247,9 @@ ICONS = {
         {"o": "#0b1020", "a": "#3ee6c1", "b": "#0b1020", "c": "#ff4d6d", "d": "#ffd23f"}),
 }
 
+INK = {"o": "#222222", "a": "#0084ff", "b": "#9cdcfe", "c": "#ffffff", "d": "#777777"}
 for name, (art, pal) in ICONS.items():
-    sprite(name, art, pal, scale=8)
+    sprite(name, art, {k: INK.get(k, v) for k, v in pal.items()}, scale=8)
 
-
-# ---------- parallax landscape layers (transparent PNG strips) ----------
-def landscape(name, w, h, base, amp, freq, color, seed, trees=False, stars=False):
-    rnd = random.Random(seed)
-    T = (0, 0, 0, 0)
-    rows = [[T] * w for _ in range(h)]
-    col = hexrgba(color)
-    dark = tuple(max(0, c - 28) if i < 3 else c for i, c in enumerate(col))
-    phase = [rnd.random() * 6.28 for _ in range(3)]
-    import math
-    heights = []
-    for x in range(w):
-        t = x / w * 6.2831
-        y = base + amp * (0.6 * math.sin(t * freq + phase[0]) + 0.3 * math.sin(t * freq * 2.3 + phase[1]) + 0.1 * math.sin(t * freq * 5.1 + phase[2]))
-        heights.append(int(y))
-    for x in range(w):
-        for y in range(heights[x], h):
-            rows[y][x] = dark if (x + y) % 7 == 0 and y > heights[x] + 2 else col
-    if trees:
-        x = 2
-        while x < w - 3:
-            if rnd.random() < 0.45:
-                top = heights[x] - rnd.randint(3, 6)
-                for yy in range(top, heights[x] + 1):
-                    if 0 <= yy < h:
-                        rows[yy][x] = dark
-                for dy in range(3):
-                    for dx in range(-dy, dy + 1):
-                        yy, xx = top + dy, x + dx
-                        if 0 <= yy < h and 0 <= xx < w:
-                            rows[yy][xx] = dark
-            x += rnd.randint(2, 5)
-    write_png(os.path.join(OUT, name + ".png"), rows, 4)
-
-
-# widths are tileable-ish: sin periods divide evenly when freq is integer
-landscape("layer-far", 320, 60, 22, 14, 3, "#1b2350", 1)
-landscape("layer-mid", 320, 60, 34, 10, 4, "#141a3a", 2)
-landscape("layer-near", 320, 60, 44, 6, 6, "#0c1028", 3, trees=True)
 
 print("sprites written to", os.path.abspath(OUT))
